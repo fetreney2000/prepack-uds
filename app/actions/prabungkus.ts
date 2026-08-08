@@ -74,7 +74,7 @@ export async function updatePrabungkus(
   const supabase = createAdminClient();
 
   const { error } = await supabase
-    .from("tblSenaraiPrabungkus")
+    .from("tblsenaraiprabungkus")
     .update({
       idUbat: data.idUbat,
       namaUbat: data.namaUbat,
@@ -107,7 +107,7 @@ export async function updatePrabungkus(
 
 export async function deletePrabungkus(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblSenaraiPrabungkus").delete().eq("ID", id);
+  const { error } = await supabase.from("tblsenaraiprabungkus").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/rekod-prabungkus");

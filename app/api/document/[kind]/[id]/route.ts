@@ -34,7 +34,7 @@ export async function GET(
 
   // Load the prepack record.
   const { data: record, error } = await supabase
-    .from("tblSenaraiPrabungkus")
+    .from("tblsenaraiprabungkus")
     .select("*")
     .eq("ID", recordId)
     .single();
@@ -92,7 +92,7 @@ async function resolveMedication(
 
   if (idUbat) {
     const { data } = await supabase
-      .from("tblSenaraiUbat")
+      .from("tblsenaraiubat")
       .select("*")
       .eq("ID", idUbat)
       .maybeSingle();
@@ -101,7 +101,7 @@ async function resolveMedication(
 
   if (!med && record.namaUbat) {
     const { data } = await supabase
-      .from("tblSenaraiUbat")
+      .from("tblsenaraiubat")
       .select("*")
       .eq("namaUbat", record.namaUbat)
       .maybeSingle();

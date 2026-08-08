@@ -1,5 +1,5 @@
 // ============================================================
-// Seed script — imports original SQLite data (if provided),
+// Seed script â€” imports original SQLite data (if provided),
 // generates the admin password hash, and backfills year-scoped
 // running numbers. Preserves original IDs (identity columns
 // accept explicit values via OVERRIDING SYSTEM VALUE).
@@ -98,7 +98,7 @@ async function main() {
 
   // 1. Ensure admin password (default farmasi456)
   const { data: existing } = await admin
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .select("settingKey")
     .eq("settingKey", "admin_password")
     .maybeSingle();
@@ -106,7 +106,7 @@ async function main() {
   if (!existing) {
     const hash = hashPassword("farmasi456");
     const { error } = await admin
-      .from("tblSystemSettings")
+      .from("tblsystemsettings")
       .upsert({ settingKey: "admin_password", settingValue: hash });
     if (error) {
       console.error("Failed to set admin password:", error.message);
@@ -137,7 +137,7 @@ async function main() {
 
     // 3. Backfill year-scoped running numbers from existing PP ids.
     const { data: prabungkus } = await admin
-      .from("public.tblSenaraiPrabungkus")
+      .from("tblsenaraiprabungkus")
       .select("idPrabungkus, tarikh");
     if (prabungkus) {
       const byYear: Record<string, number> = {};
@@ -152,7 +152,7 @@ async function main() {
       for (const [year, max] of Object.entries(byYear)) {
         const key = `running_number_${year}`;
         const { error } = await admin
-          .from("public.tblSystemSettings")
+          .from("tblsystemsettings")
           .upsert({ settingKey: key, settingValue: String(max + 1) });
         if (error) {
           console.error(`  Running number for ${year} FAILED: ${error.message}`);
@@ -182,7 +182,7 @@ async function main() {
 
     // 5. Backfill year-scoped UDS running numbers.
     const { data: rekod } = await admin
-      .from("uds.tblRekodLabel")
+      .schema("uds").from("tblrekodlabel")
       .select("Rujukan, Tarikh");
     if (rekod) {
       const byYear: Record<string, number> = {};
@@ -197,7 +197,7 @@ async function main() {
       for (const [year, max] of Object.entries(byYear)) {
         const key = `running_number_uds_${year}`;
         const { error } = await admin
-          .from("public.tblSystemSettings")
+          .from("tblsystemsettings")
           .upsert({ settingKey: key, settingValue: String(max + 1) });
         if (error) {
           console.error(`  UDS running number for ${year} FAILED: ${error.message}`);

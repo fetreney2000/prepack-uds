@@ -35,7 +35,7 @@ export async function createLookup(
   const { error } =
     table === "tblKategoriUbat"
       ? await supabase
-          .from("tblKategoriUbat")
+          .from("tblkategoriubat")
           .insert({ nama: parsed.data.nama, prefix: parsed.data.prefix ?? "X" })
       : await supabase.from(table).insert({ nama: parsed.data.nama });
   if (error) return { ok: false, error: error.message };
@@ -57,7 +57,7 @@ export async function updateLookup(
   const { error } =
     table === "tblKategoriUbat"
       ? await supabase
-          .from("tblKategoriUbat")
+          .from("tblkategoriubat")
           .update({ nama: parsed.data.nama, prefix: parsed.data.prefix ?? "X" })
           .eq("ID", id)
       : await supabase.from(table).update({ nama: parsed.data.nama }).eq("ID", id);
@@ -88,7 +88,7 @@ export async function createLabelType(input: {
   const parsed = labelTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisLabel").insert(parsed.data);
+  const { error } = await supabase.from("tbljenislabel").insert(parsed.data);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -101,7 +101,7 @@ export async function updateLabelType(
   const parsed = labelTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisLabel").update(parsed.data).eq("ID", id);
+  const { error } = await supabase.from("tbljenislabel").update(parsed.data).eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -109,7 +109,7 @@ export async function updateLabelType(
 
 export async function deleteLabelType(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisLabel").delete().eq("ID", id);
+  const { error } = await supabase.from("tbljenislabel").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -124,7 +124,7 @@ export async function createWorksheetType(input: {
   const parsed = worksheetTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisWorksheet").insert(parsed.data);
+  const { error } = await supabase.from("tbljenisworksheet").insert(parsed.data);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -137,7 +137,7 @@ export async function updateWorksheetType(
   const parsed = worksheetTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisWorksheet").update(parsed.data).eq("ID", id);
+  const { error } = await supabase.from("tbljenisworksheet").update(parsed.data).eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -145,7 +145,7 @@ export async function updateWorksheetType(
 
 export async function deleteWorksheetType(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tblJenisWorksheet").delete().eq("ID", id);
+  const { error } = await supabase.from("tbljenisworksheet").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -184,7 +184,7 @@ export async function updateRunningNumber(
   }
 
   const { error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .upsert(
       { settingKey: `running_number_${year}`, settingValue: String(value) },
       { onConflict: "settingKey" },
@@ -201,7 +201,7 @@ export async function updateRunningNumber(
 export async function getRunningNumber(year: number): Promise<ActionResult<number>> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .select("settingValue")
     .eq("settingKey", `running_number_${year}`)
     .maybeSingle();
@@ -223,7 +223,7 @@ function revalidateLookups() {
 export async function getActiveColorScheme(): Promise<ActionResult<string>> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .select("settingValue")
     .eq("settingKey", "color_scheme")
     .maybeSingle();
@@ -235,7 +235,7 @@ export async function getActiveColorScheme(): Promise<ActionResult<string>> {
 export async function setActiveColorScheme(schemeId: string): Promise<ActionResult> {
   const supabase = createAdminClient();
   const { error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .upsert(
       { settingKey: "color_scheme", settingValue: schemeId },
       { onConflict: "settingKey" },
@@ -249,7 +249,7 @@ export async function setActiveColorScheme(schemeId: string): Promise<ActionResu
 export async function listCustomColorSchemes(): Promise<ActionResult<ColorSchemeDefinition[]>> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblColorSchemes")
+    .from("tblcolorschemes")
     .select("*")
     .order("ID", { ascending: true });
   if (error) return { ok: false, error: error.message };
@@ -282,7 +282,7 @@ export async function createCustomColorScheme(input: {
 
   // Duplicate schemeId check (built-in or custom).
   const { data: clash } = await supabase
-    .from("tblColorSchemes")
+    .from("tblcolorschemes")
     .select("schemeId")
     .eq("schemeId", schemeId)
     .maybeSingle();
@@ -297,7 +297,7 @@ export async function createCustomColorScheme(input: {
     isBuiltIn: 0,
   };
   const { data: inserted, error } = await supabase
-    .from("tblColorSchemes")
+    .from("tblcolorschemes")
     .insert(row)
     .select("*")
     .single();
@@ -323,12 +323,12 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
   const supabase = createAdminClient();
 
   const { data: target } = await supabase
-    .from("tblColorSchemes")
+    .from("tblcolorschemes")
     .select("schemeId")
     .eq("ID", id)
     .maybeSingle();
 
-  const { error } = await supabase.from("tblColorSchemes").delete().eq("ID", id);
+  const { error } = await supabase.from("tblcolorschemes").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
   let resetToLight = false;
@@ -336,7 +336,7 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
     const active = await getActiveColorScheme();
     if (active.ok && active.data === target.schemeId) {
       await supabase
-        .from("tblSystemSettings")
+        .from("tblsystemsettings")
         .upsert(
           { settingKey: "color_scheme", settingValue: "light" },
           { onConflict: "settingKey" },

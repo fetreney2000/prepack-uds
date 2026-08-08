@@ -57,7 +57,7 @@ export async function verifyAdminPassword(password: string): Promise<AuthResult>
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .select("settingValue")
     .eq("settingKey", "admin_password")
     .maybeSingle();
@@ -85,7 +85,7 @@ export async function changeAdminPassword(
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .select("settingValue")
     .eq("settingKey", "admin_password")
     .maybeSingle();
@@ -98,7 +98,7 @@ export async function changeAdminPassword(
   }
 
   const { error: updErr } = await supabase
-    .from("tblSystemSettings")
+    .from("tblsystemsettings")
     .update({ settingValue: hashPassword(parsed.data.next) })
     .eq("settingKey", "admin_password");
 

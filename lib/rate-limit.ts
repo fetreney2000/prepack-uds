@@ -35,7 +35,7 @@ function nowIso(): string {
 export async function checkRateLimit(fingerprint: string): Promise<RateLimitState> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
-    .from("tblAuthAttempts")
+    .from("tblauthattempts")
     .select("attempt_count, locked_until, updated_at")
     .eq("fingerprint", fingerprint)
     .maybeSingle();
@@ -87,7 +87,7 @@ export async function recordAuthResult(
 
   if (ok) {
     // Success: clear the counter.
-    await supabase.from("tblAuthAttempts").upsert(
+    await supabase.from("tblauthattempts").upsert(
       { fingerprint, attempt_count: 0, locked_until: null, updated_at: nowIso() },
       { onConflict: "fingerprint" },
     );
@@ -96,7 +96,7 @@ export async function recordAuthResult(
 
   // Failure: increment (read-modify-write best-effort).
   const { data } = await supabase
-    .from("tblAuthAttempts")
+    .from("tblauthattempts")
     .select("attempt_count")
     .eq("fingerprint", fingerprint)
     .maybeSingle();
@@ -105,7 +105,7 @@ export async function recordAuthResult(
   const locked =
     next >= MAX_ATTEMPTS ? new Date(Date.now() + LOCKOUT_MS).toISOString() : null;
 
-  await supabase.from("tblAuthAttempts").upsert(
+  await supabase.from("tblauthattempts").upsert(
     {
       fingerprint,
       attempt_count: next,

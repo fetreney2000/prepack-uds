@@ -75,10 +75,10 @@ export function usePrabungkusList() {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("tblSenaraiPrabungkus")
+        .from("tblsenaraiprabungkus")
         .select("*")
         .order("tarikh", { ascending: false })
-        .order("idPrabungkus", { ascending: false });
+        .order("idprabungkus", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PrabungkusRecord[];
     },
@@ -91,9 +91,9 @@ export function useUbatList() {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("tblSenaraiUbat")
-        .select("*, jenisLabel:jenisLabel(deskripsiLabel), jenisWorksheet:jenisWorksheet(deskripsiWorksheet)")
-        .order("namaUbat", { ascending: true });
+        .from("tblsenaraiubat")
+        .select("*, jenislabel:jenislabel(deskripsilabel), jenisworksheet:jenisworksheet(deskripsiworksheet)")
+        .order("namaubat", { ascending: true });
       if (error) throw error;
       return (data ?? []) as UbatRecord[];
     },
@@ -106,7 +106,8 @@ export function useUdsRekodLabelList() {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("uds.tblRekodLabel")
+        .schema("uds")
+        .from("tblrekodlabel")
         .select("*")
         .order("Tarikh", { ascending: false })
         .order("ID", { ascending: false });
@@ -122,7 +123,8 @@ export function useUdsUbatList() {
     queryFn: async () => {
       const supabase = createClient();
       const { data, error } = await supabase
-        .from("uds.tblNamaUbat")
+        .schema("uds")
+        .from("tblnamaubat")
         .select("*")
         .order("Nama", { ascending: true });
       if (error) throw error;

@@ -27,7 +27,7 @@ export async function createUbat(
   const supabase = createAdminClient();
 
   const { data: row, error } = await supabase
-    .from("tblSenaraiUbat")
+    .from("tblsenaraiubat")
     .insert({
       deskripsiPrabungkus: data.deskripsiPrabungkus,
       namaUbat: data.namaUbat,
@@ -68,7 +68,7 @@ export async function updateUbat(
   const supabase = createAdminClient();
 
   const { error } = await supabase
-    .from("tblSenaraiUbat")
+    .from("tblsenaraiubat")
     .update({
       deskripsiPrabungkus: data.deskripsiPrabungkus,
       namaUbat: data.namaUbat,
@@ -100,7 +100,7 @@ export async function deleteUbat(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
   // Soft-reference integrity: no FK cascade, no block. Orphaned prepack
   // records keep their denormalized namaUbat snapshot.
-  const { error } = await supabase.from("tblSenaraiUbat").delete().eq("ID", id);
+  const { error } = await supabase.from("tblsenaraiubat").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/senarai-ubat");

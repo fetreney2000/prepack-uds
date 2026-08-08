@@ -25,6 +25,7 @@
 //   PREPACK_DB=prepack_webapp.db UDS_DB=labeluds.db \
 //   npx tsx supabase/migrate-2026.ts
 // ============================================================
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, existsSync } from "node:fs";
@@ -370,4 +371,6 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+
 

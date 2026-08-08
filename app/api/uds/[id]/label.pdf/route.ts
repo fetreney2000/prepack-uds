@@ -42,7 +42,8 @@ export async function GET(
 
   // Load the record.
   const { data: record, error } = await supabase
-    .from("uds.tblRekodLabel")
+    .schema("uds")
+    .from("tblrekodlabel")
     .select("*")
     .eq("ID", recordId)
     .single();
@@ -57,7 +58,8 @@ export async function GET(
   const namaUbatId = (record as { NamaUbatID: number | null }).NamaUbatID;
   if (namaUbatId) {
     const { data: med } = await supabase
-      .from("uds.tblNamaUbat")
+      .schema("uds")
+      .from("tblnamaubat")
       .select("Nama, Kekuatan")
       .eq("ID", namaUbatId)
       .maybeSingle();

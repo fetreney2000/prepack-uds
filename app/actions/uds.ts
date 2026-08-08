@@ -1,4 +1,4 @@
-// Server Actions — UDS label system
+﻿// Server Actions â€” UDS label system
 // Phase 2: server-generated year-scoped Rujukan (atomic via RPC),
 // read-only Rujukan on update, normalization + canonical name override.
 "use server";
@@ -73,7 +73,7 @@ export async function updateUdsRekodLabel(
 
   // Rujukan is read-only: preserve the existing record's value.
   const { error } = await supabase
-    .from("uds.tblRekodLabel")
+    .schema("uds").from("tblrekodlabel")
     .update({
       Tarikh: normalized.Tarikh,
       NamaUbat: normalized.NamaUbat,
@@ -98,7 +98,7 @@ export async function updateUdsRekodLabel(
 
 export async function deleteUdsRekodLabel(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("uds.tblRekodLabel").delete().eq("ID", id);
+  const { error } = await supabase.schema("uds").from("tblrekodlabel").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/uds/rekod-label");
@@ -128,7 +128,7 @@ export async function createUdsUbat(
   }
   const supabase = createAdminClient();
   const { data: row, error } = await supabase
-    .from("uds.tblNamaUbat")
+    .schema("uds").from("tblnamaubat")
     .insert({
       Nama: parsed.data.Nama.trim().toUpperCase(),
       Kekuatan: parsed.data.Kekuatan ? parsed.data.Kekuatan.trim().toUpperCase() : null,
@@ -151,7 +151,7 @@ export async function updateUdsUbat(
   }
   const supabase = createAdminClient();
   const { error } = await supabase
-    .from("uds.tblNamaUbat")
+    .schema("uds").from("tblnamaubat")
     .update({
       Nama: parsed.data.Nama.trim().toUpperCase(),
       Kekuatan: parsed.data.Kekuatan ? parsed.data.Kekuatan.trim().toUpperCase() : null,
@@ -165,7 +165,7 @@ export async function updateUdsUbat(
 
 export async function deleteUdsUbat(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("uds.tblNamaUbat").delete().eq("ID", id);
+  const { error } = await supabase.schema("uds").from("tblnamaubat").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/uds/senarai-ubat");
@@ -180,7 +180,7 @@ async function applyCanonicalName(
   if (!norm.NamaUbatID) return norm;
   const supabase = createAdminClient();
   const { data } = await supabase
-    .from("uds.tblNamaUbat")
+    .schema("uds").from("tblnamaubat")
     .select("Nama")
     .eq("ID", norm.NamaUbatID)
     .single();
