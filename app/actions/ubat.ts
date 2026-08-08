@@ -29,20 +29,20 @@ export async function createUbat(
   const { data: row, error } = await supabase
     .from("tblsenaraiubat")
     .insert({
-      deskripsiPrabungkus: data.deskripsiPrabungkus,
-      namaUbat: data.namaUbat,
-      namaDagangan: data.namaDagangan,
-      kategoriUbat: data.kategoriUbat,
-      unitSKU: data.unitSKU,
-      unitPKU: data.unitPKU,
+      deskripsiprabungkus: data.deskripsiPrabungkus,
+      namaubat: data.namaUbat,
+      namadagangan: data.namaDagangan,
+      kategoriubat: data.kategoriUbat,
+      unitsku: data.unitSKU,
+      unitpku: data.unitPKU,
       harga: data.harga,
-      saizPek: data.saizPek,
+      saizpek: data.saizPek,
       pengilang: data.pengilang,
-      nomborMAL: data.nomborMAL,
-      arahanTambahan: data.arahanTambahan,
-      jangkaHayat: data.jangkaHayat,
-      jenisLabel: data.jenisLabel,
-      jenisWorksheet: data.jenisWorksheet,
+      nombormal: data.nomborMAL,
+      arahantambahan: data.arahanTambahan,
+      jangkahayat: data.jangkaHayat,
+      jenislabel: data.jenisLabel,
+      jenisworksheet: data.jenisWorksheet,
     })
     .select("ID")
     .single();
@@ -70,20 +70,20 @@ export async function updateUbat(
   const { error } = await supabase
     .from("tblsenaraiubat")
     .update({
-      deskripsiPrabungkus: data.deskripsiPrabungkus,
-      namaUbat: data.namaUbat,
-      namaDagangan: data.namaDagangan,
-      kategoriUbat: data.kategoriUbat,
-      unitSKU: data.unitSKU,
-      unitPKU: data.unitPKU,
+      deskripsiprabungkus: data.deskripsiPrabungkus,
+      namaubat: data.namaUbat,
+      namadagangan: data.namaDagangan,
+      kategoriubat: data.kategoriUbat,
+      unitsku: data.unitSKU,
+      unitpku: data.unitPKU,
       harga: data.harga,
-      saizPek: data.saizPek,
+      saizpek: data.saizPek,
       pengilang: data.pengilang,
-      nomborMAL: data.nomborMAL,
-      arahanTambahan: data.arahanTambahan,
-      jangkaHayat: data.jangkaHayat,
-      jenisLabel: data.jenisLabel,
-      jenisWorksheet: data.jenisWorksheet,
+      nombormal: data.nomborMAL,
+      arahantambahan: data.arahanTambahan,
+      jangkahayat: data.jangkaHayat,
+      jenislabel: data.jenisLabel,
+      jenisworksheet: data.jenisWorksheet,
     })
     .eq("ID", id);
 

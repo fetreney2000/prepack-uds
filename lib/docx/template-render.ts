@@ -28,6 +28,7 @@ import { formatDate } from "@/lib/format";
 
 export interface TemplateRecord {
   ID: number;
+  idPrabungkus?: string;
   tarikh: string;
   namaUbat: string;
   namaDagangan?: string | null;

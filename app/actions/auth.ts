@@ -58,11 +58,11 @@ export async function verifyAdminPassword(password: string): Promise<AuthResult>
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("tblsystemsettings")
-    .select("settingValue")
+    .select("settingvalue")
     .eq("settingKey", "admin_password")
     .maybeSingle();
 
-  const valid = !error && !!data && verifyPassword(parsed.data.password, data.settingValue);
+  const valid = !error && !!data && verifyPassword(parsed.data.password, data.settingvalue);
 
   await recordAuthResult(fingerprint, valid);
 
@@ -86,20 +86,20 @@ export async function changeAdminPassword(
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("tblsystemsettings")
-    .select("settingValue")
+    .select("settingvalue")
     .eq("settingKey", "admin_password")
     .maybeSingle();
 
   if (error || !data) {
     return { ok: false, message: "Kata laluan belum ditetapkan." };
   }
-  if (!verifyPassword(parsed.data.current, data.settingValue)) {
+  if (!verifyPassword(parsed.data.current, data.settingvalue)) {
     return { ok: false, message: "Kata laluan semasa salah." };
   }
 
   const { error: updErr } = await supabase
     .from("tblsystemsettings")
-    .update({ settingValue: hashPassword(parsed.data.next) })
+    .update({ settingvalue: hashPassword(parsed.data.next) })
     .eq("settingKey", "admin_password");
 
   if (updErr) {

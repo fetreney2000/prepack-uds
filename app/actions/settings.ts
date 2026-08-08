@@ -88,7 +88,11 @@ export async function createLabelType(input: {
   const parsed = labelTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tbljenislabel").insert(parsed.data);
+  const payload = {
+    deskripsilabel: parsed.data.deskripsiLabel,
+    namafail: parsed.data.namaFail,
+  };
+  const { error } = await supabase.from("tbljenislabel").insert(payload);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -101,7 +105,11 @@ export async function updateLabelType(
   const parsed = labelTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tbljenislabel").update(parsed.data).eq("ID", id);
+  const payload = {
+    deskripsilabel: parsed.data.deskripsiLabel,
+    namafail: parsed.data.namaFail,
+  };
+  const { error } = await supabase.from("tbljenislabel").update(payload).eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -124,7 +132,11 @@ export async function createWorksheetType(input: {
   const parsed = worksheetTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tbljenisworksheet").insert(parsed.data);
+  const payload = {
+    deskripsiworksheet: parsed.data.deskripsiWorksheet,
+    namafail: parsed.data.namaFail,
+  };
+  const { error } = await supabase.from("tbljenisworksheet").insert(payload);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -137,7 +149,11 @@ export async function updateWorksheetType(
   const parsed = worksheetTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const { error } = await supabase.from("tbljenisworksheet").update(parsed.data).eq("ID", id);
+  const payload = {
+    deskripsiworksheet: parsed.data.deskripsiWorksheet,
+    namafail: parsed.data.namaFail,
+  };
+  const { error } = await supabase.from("tbljenisworksheet").update(payload).eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -186,8 +202,8 @@ export async function updateRunningNumber(
   const { error } = await supabase
     .from("tblsystemsettings")
     .upsert(
-      { settingKey: `running_number_${year}`, settingValue: String(value) },
-      { onConflict: "settingKey" },
+      { settingkey: `running_number_${year}`, settingvalue: String(value) },
+      { onConflict: "settingkey" },
     );
   if (error) return { ok: false, error: error.message };
 
@@ -202,11 +218,11 @@ export async function getRunningNumber(year: number): Promise<ActionResult<numbe
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("tblsystemsettings")
-    .select("settingValue")
-    .eq("settingKey", `running_number_${year}`)
+    .select("settingvalue")
+    .eq("settingkey", `running_number_${year}`)
     .maybeSingle();
   if (error) return { ok: false, error: error.message };
-  return { ok: true, data: data ? parseInt(data.settingValue, 10) : 1 };
+  return { ok: true, data: data ? parseInt(data.settingvalue, 10) : 1 };
 }
 
 // ---------- Helpers ----------
@@ -224,11 +240,11 @@ export async function getActiveColorScheme(): Promise<ActionResult<string>> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("tblsystemsettings")
-    .select("settingValue")
-    .eq("settingKey", "color_scheme")
+    .select("settingvalue")
+    .eq("settingkey", "color_scheme")
     .maybeSingle();
   if (error) return { ok: false, error: error.message };
-  return { ok: true, data: data?.settingValue ?? "light" };
+  return { ok: true, data: data?.settingvalue ?? "light" };
 }
 
 /** Set the active color scheme id (upsert). */
@@ -237,8 +253,8 @@ export async function setActiveColorScheme(schemeId: string): Promise<ActionResu
   const { error } = await supabase
     .from("tblsystemsettings")
     .upsert(
-      { settingKey: "color_scheme", settingValue: schemeId },
-      { onConflict: "settingKey" },
+      { settingkey: "color_scheme", settingvalue: schemeId },
+      { onConflict: "settingkey" },
     );
   if (error) return { ok: false, error: error.message };
   revalidatePath("/tetapan");
@@ -338,8 +354,8 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
       await supabase
         .from("tblsystemsettings")
         .upsert(
-          { settingKey: "color_scheme", settingValue: "light" },
-          { onConflict: "settingKey" },
+          { settingkey: "color_scheme", settingvalue: "light" },
+          { onConflict: "settingkey" },
         );
       resetToLight = true;
     }

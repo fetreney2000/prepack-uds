@@ -76,22 +76,22 @@ export async function updatePrabungkus(
   const { error } = await supabase
     .from("tblsenaraiprabungkus")
     .update({
-      idUbat: data.idUbat,
-      namaUbat: data.namaUbat,
+      idubat: data.idUbat,
+      namaubat: data.namaUbat,
       tarikh: data.tarikh,
-      namaDagangan: data.namaDagangan,
-      nomborKelompok: data.nomborKelompok,
-      tarikhLuputAsal: data.tarikhLuputAsal,
-      tarikhLuputBaharu: data.tarikhLuputBaharu,
+      namadagangan: data.namaDagangan,
+      nomborkelompok: data.nomborKelompok,
+      tarikhluputasal: data.tarikhLuputAsal,
+      tarikhluputbaharu: data.tarikhLuputBaharu,
       pengilang: data.pengilang,
-      nomborMAL: data.nomborMAL,
-      kuantitiUntukDiprabungkus: data.kuantitiUntukDiprabungkus,
-      saizPek: data.saizPek,
-      deskripsiPek: data.deskripsiPek,
-      hargaSetiapPek: data.hargaSetiapPek,
-      jumlahPekDihasilkan: data.jumlahPekDihasilkan,
+      nombormal: data.nomborMAL,
+      kuantitiuntukdiprabungkus: data.kuantitiUntukDiprabungkus,
+      saizpek: data.saizPek,
+      deskripsipek: data.deskripsiPek,
+      hargasetiappek: data.hargaSetiapPek,
+      jumlahpekdihasilkan: data.jumlahPekDihasilkan,
       baki: data.baki,
-      arahanTambahan: data.arahanTambahan,
+      arahantambahan: data.arahanTambahan,
     })
     .eq("ID", id);
 

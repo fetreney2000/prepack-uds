@@ -48,9 +48,9 @@ export async function GET(
 
   // Determine the template file (defaults per kind).
   const templateField =
-    kindValid === "label" ? "jenisLabel" : "jenisWorksheet";
+    kindValid === "label" ? "jenislabel" : "jenisworksheet";
   const templateTable =
-    kindValid === "label" ? "tblJenisLabel" : "tblJenisWorksheet";
+    kindValid === "label" ? "tbljenislabel" : "tbljenisworksheet";
   const defaultTemplate =
     kindValid === "label" ? DEFAULT_LABEL_TEMPLATE : DEFAULT_WORKSHEET_TEMPLATE;
 
@@ -59,17 +59,17 @@ export async function GET(
   if (medTypeId != null) {
     const { data: typeRow } = await supabase
       .from(templateTable)
-      .select("namaFail")
+      .select("namafail")
       .eq("ID", medTypeId)
       .maybeSingle();
-    if (typeRow?.namaFail) templateFileName = typeRow.namaFail;
+    if (typeRow?.namafail) templateFileName = typeRow.namafail;
   }
 
   // Render the document.
-  const data = buildTemplateData(record as TemplateRecord, med);
+  const data = buildTemplateData(mapRecord(record), med);
   const buffer = await renderDocument(templateFileName, data);
 
-  const safeBase = sanitizeId((record as { idPrabungkus?: string }).idPrabungkus ?? String(recordId));
+  const safeBase = sanitizeId((record as { idprabungkus?: string }).idprabungkus ?? String(recordId));
   const filename =
     kindValid === "label" ? `Label_${safeBase}.docx` : `KertasKerja_${safeBase}.docx`;
 
@@ -83,11 +83,35 @@ export async function GET(
   });
 }
 
+// Map a raw PostgREST row (lowercase unquoted columns) to the camelCase
+// shape buildTemplateData expects.
+function mapRecord(row: Record<string, unknown>): TemplateRecord {
+  return {
+    ID: row.ID as number,
+    idPrabungkus: (row.idprabungkus as string) ?? "",
+    tarikh: (row.tarikh as string) ?? "",
+    namaUbat: (row.namaubat as string) ?? "",
+    namaDagangan: (row.namadagangan as string | null) ?? null,
+    nomborKelompok: (row.nomborkelompok as string | null) ?? null,
+    tarikhLuputAsal: (row.tarikhluputasal as string | null) ?? null,
+    tarikhLuputBaharu: (row.tarikhluputbaharu as string | null) ?? null,
+    pengilang: (row.pengilang as string | null) ?? null,
+    nomborMAL: (row.nombormal as string | null) ?? null,
+    kuantitiUntukDiprabungkus: (row.kuantitiuntukdiprabungkus as number | null) ?? null,
+    saizPek: (row.saizpek as number | null) ?? null,
+    deskripsiPek: (row.deskripsipek as string | null) ?? null,
+    hargaSetiapPek: (row.hargasetiappek as number | null) ?? null,
+    jumlahPekDihasilkan: (row.jumlahpekdihasilkan as number | null) ?? null,
+    baki: (row.baki as number | null) ?? null,
+    arahanTambahan: (row.arahantambahan as string | null) ?? null,
+  };
+}
+
 async function resolveMedication(
   supabase: ReturnType<typeof createAdminClient>,
   record: Record<string, unknown>,
 ): Promise<Record<string, unknown> | null> {
-  const idUbat = record.idUbat as number | null;
+  const idUbat = record.idubat as number | null;
   let med: Record<string, unknown> | null = null;
 
   if (idUbat) {
@@ -99,13 +123,22 @@ async function resolveMedication(
     med = data ?? null;
   }
 
-  if (!med && record.namaUbat) {
+  if (!med && record.namaubat) {
     const { data } = await supabase
       .from("tblsenaraiubat")
       .select("*")
-      .eq("namaUbat", record.namaUbat)
+      .eq("namaubat", record.namaubat)
       .maybeSingle();
     med = data ?? null;
+  }
+
+  // Normalize the fields buildTemplateData reads (camelCase).
+  if (med) {
+    med = {
+      ...med,
+      unitSKU: med.unitsku ?? med.unitSKU ?? null,
+      kategoriUbat: med.kategoriubat ?? med.kategoriUbat ?? null,
+    };
   }
 
   return med;
