@@ -20,7 +20,14 @@ async function printLabel(record: UdsRekodLabel) {
   try {
     const res = await fetch(`/api/uds/${record.ID}/label.pdf`);
     if (!res.ok) {
-      toast.error("Gagal menjana label.");
+      let detail = "Gagal menjana label.";
+      try {
+        const body = await res.json();
+        if (body?.detail) detail = body.detail;
+      } catch {
+        // ignore parse failure
+      }
+      toast.error(detail);
       return;
     }
     const meta = {

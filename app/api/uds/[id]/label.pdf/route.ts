@@ -10,6 +10,7 @@
 //   X-UDS-Font, X-UDS-Font-Size, X-UDS-Grid (colsxrows),
 //   X-UDS-Cells, X-UDS-Mode
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { renderUdsLabelPdf } from "@/lib/pdf/uds-label-pdf";
 import type { UdsMode } from "@/lib/biz/uds-label-layout";
@@ -32,7 +33,23 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const { id } = await params;
+  try {
+    const { id } = await params;
+    return await handleGet(req, id);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Ralat tidak diketahui.";
+    console.error("[uds-label-pdf]", message, err);
+    return NextResponse.json(
+      { error: "Gagal menjana label.", detail: message },
+      { status: 500 },
+    );
+  }
+}
+
+async function handleGet(
+  req: Request,
+  id: string,
+): Promise<Response> {
   const recordId = parseInt(id, 10);
   if (Number.isNaN(recordId)) {
     return NextResponse.json({ error: "ID tidak sah." }, { status: 400 });
@@ -150,11 +167,7 @@ function numParam(url: URL, key: string): number | undefined {
 }
 
 async function sha256(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return createHash("sha256").update(input).digest("hex");
 }
 
 async function tryGetCached(

@@ -68,7 +68,13 @@ let fontCache: LoadedFont[] | null = null;
  */
 async function loadFonts(): Promise<LoadedFont[]> {
   if (fontCache) return fontCache;
-  const entries = await readdir(FONT_DIR);
+  let entries: string[];
+  try {
+    entries = await readdir(FONT_DIR);
+  } catch {
+    fontCache = [];
+    return [];
+  }
   const names = entries
     .filter((f) => f.toLowerCase().endsWith(".ttf"))
     .map((f) => f.replace(/\.ttf$/i, ""))
