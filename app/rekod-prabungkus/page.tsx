@@ -31,14 +31,17 @@ export default function RekodPrabungkusPage() {
       {
         accessorKey: "idPrabungkus",
         header: "ID Prabungkus",
+        cell: ({ row }) => <span className="font-medium">{row.original.idPrabungkus ?? "—"}</span>,
       },
       {
         accessorKey: "namaUbat",
         header: "Nama Ubat",
+        cell: ({ row }) => row.original.namaUbat ?? "—",
       },
       {
         accessorKey: "deskripsiPek",
         header: "Deskripsi Pek",
+        cell: ({ row }) => row.original.deskripsiPek ?? "—",
       },
       {
         accessorKey: "jumlahPekDihasilkan",
