@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, FileText, Pill, BarChart3, Settings, Tags, PillBottle, Printer } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -87,7 +88,7 @@ export function Navigation() {
           <Link
             href="/tetapan"
             className={cn(
-              "ml-auto flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               pathname.startsWith("/tetapan")
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -96,6 +97,8 @@ export function Navigation() {
             <Settings className="h-4 w-4" />
             Tetapan
           </Link>
+
+          <ThemeToggle />
         </nav>
       </div>
     </header>

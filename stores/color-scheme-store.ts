@@ -4,6 +4,7 @@
 "use client";
 
 import { create } from "zustand";
+import { DARK_SCHEME_CSS } from "@/lib/color-schemes";
 
 export const COLOR_VARS_KEY = "prepack-color-vars";
 export const COLOR_SCHEME_KEY = "prepack-color-scheme";
@@ -22,6 +23,7 @@ interface ColorSchemeState {
   hydrating: boolean;
   setActiveScheme: (id: string, vars: Record<string, string>) => void;
   applyScheme: (vars: Record<string, string>) => void;
+  applyDark: (vars?: Record<string, string>) => void;
   hydrateFromCache: () => void;
   clearCache: () => void;
 }
@@ -63,6 +65,13 @@ export const useColorSchemeStore = create<ColorSchemeState>((set) => ({
   },
 
   applyScheme: (vars) => {
+    applyToRoot(vars);
+    set({ cssVars: vars });
+  },
+
+  // Dark mode is always the design-system dark palette (all built-in
+  // schemes are light palettes).
+  applyDark: (vars = DARK_SCHEME_CSS) => {
     applyToRoot(vars);
     set({ cssVars: vars });
   },

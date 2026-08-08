@@ -149,6 +149,56 @@ export function findBuiltInScheme(schemeId: string): ColorSchemeDefinition | und
   return BUILT_IN_SCHEMES.find((s) => s.schemeId === schemeId);
 }
 
+/**
+ * Bold Wikipedia dark-theme CSS variables. Applied to `:root` when dark
+ * mode is active. All built-in color schemes are light palettes, so dark
+ * mode always uses this single design-system palette.
+ */
+export const DARK_SCHEME_CSS: Record<string, string> = {
+  "--background": "hsl(0 0% 12%)",
+  "--foreground": "hsl(0 0% 92%)",
+  "--card": "hsl(0 0% 15%)",
+  "--card-foreground": "hsl(0 0% 92%)",
+  "--popover": "hsl(0 0% 15%)",
+  "--popover-foreground": "hsl(0 0% 92%)",
+  "--primary": "hsl(212 100% 75%)",
+  "--primary-foreground": "hsl(212 100% 10%)",
+  "--secondary": "hsl(0 0% 20%)",
+  "--secondary-foreground": "hsl(0 0% 92%)",
+  "--muted": "hsl(0 0% 18%)",
+  "--muted-foreground": "hsl(0 0% 65%)",
+  "--accent": "hsl(212 100% 20%)",
+  "--accent-foreground": "hsl(212 100% 85%)",
+  "--destructive": "hsl(0 75% 50%)",
+  "--destructive-foreground": "hsl(0 0% 100%)",
+  "--border": "hsl(0 0% 25%)",
+  "--input": "hsl(0 0% 25%)",
+  "--ring": "hsl(212 100% 75%)",
+  "--chart-1": "hsl(212 100% 75%)",
+  "--chart-2": "hsl(160 60% 55%)",
+  "--chart-3": "hsl(40 90% 65%)",
+  "--chart-4": "hsl(270 70% 70%)",
+  "--chart-5": "hsl(330 80% 65%)",
+  "--sidebar": "hsl(0 0% 10%)",
+  "--sidebar-foreground": "hsl(0 0% 85%)",
+  "--sidebar-primary": "hsl(212 100% 75%)",
+  "--sidebar-primary-foreground": "hsl(212 100% 10%)",
+  "--sidebar-accent": "hsl(0 0% 20%)",
+  "--sidebar-accent-foreground": "hsl(0 0% 95%)",
+  "--sidebar-border": "hsl(0 0% 22%)",
+  "--sidebar-ring": "hsl(212 100% 75%)",
+  "--radius": "0.125rem",
+  "--font-sans": '"Inter", "Segoe UI", "Helvetica Neue", sans-serif',
+  "--font-mono": '"Geist Mono", monospace',
+  "--shadow-color": "rgba(0, 0, 0, 0.4)",
+  "--shadow-opacity": "0.15",
+  "--shadow-blur": "6px",
+  "--shadow-spread": "0px",
+  "--shadow-offset-x": "0px",
+  "--shadow-offset-y": "2px",
+  "--letter-spacing": "0.0125em",
+};
+
 /** Generate a schemeId from a name (lowercase, non-alnum → '-'). */
 export function schemeIdFromName(name: string): string {
   return name
