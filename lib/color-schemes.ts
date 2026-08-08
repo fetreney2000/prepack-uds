@@ -1,21 +1,27 @@
-// Color scheme definitions — 16 built-ins + CSS derivation (§4.9)
-// Matches the original's hardcoded schemes in app.js exactly.
+// Color scheme definitions — built-ins + CSS derivation
+// The default "light" scheme is the Bold Wikipedia design-system theme
+// (see app/globals.css). Other schemes derive a full token set from a
+// 5-color palette so every scheme renders with the same design system.
 import type { ColorSchemeDefinition } from "@/stores/color-scheme-store";
 
 const darkForeground = "#f5f5f5";
+const sansFont = '"Inter", "Segoe UI", "Helvetica Neue", sans-serif';
+const monoFont = '"Geist Mono", monospace';
 
 /**
- * Derive the 20 CSS variables from a scheme's 5 colors (§4.9):
+ * Derive the full CSS variable set from a scheme's 5 colors:
  *   colors[0] background, colors[1] surface-alt, colors[2] accent,
  *   colors[3] primary, colors[4] text-primary/highlight.
+ * Mirrors the Bold Wikipedia token set (radius, shadows, letter-spacing,
+ * chart + sidebar tokens) so every scheme shares the design system.
  */
 export function deriveCssVars(colors: string[]): Record<string, string> {
   const [bg, surface, accent, primary, highlight] = [
     colors[0] ?? "#ffffff",
-    colors[1] ?? "#eeeeee",
-    colors[2] ?? "#cccccc",
-    colors[3] ?? "#333333",
-    colors[4] ?? "#111111",
+    colors[1] ?? "#f4f4f5",
+    colors[2] ?? "#e4e4e7",
+    colors[3] ?? "#18181b",
+    colors[4] ?? "#52525b",
   ];
   return {
     "--background": bg,
@@ -40,7 +46,29 @@ export function deriveCssVars(colors: string[]): Record<string, string> {
     "--destructive": "#d33",
     "--destructive-foreground": "#ffffff",
     "--input": accent,
-    "--radius": "0.5rem",
+    "--chart-1": primary,
+    "--chart-2": accent,
+    "--chart-3": highlight,
+    "--chart-4": "#8b5cf6",
+    "--chart-5": "#ec4899",
+    "--sidebar": bg,
+    "--sidebar-foreground": highlight,
+    "--sidebar-primary": primary,
+    "--sidebar-primary-foreground": "#ffffff",
+    "--sidebar-accent": surface,
+    "--sidebar-accent-foreground": highlight,
+    "--sidebar-border": accent,
+    "--sidebar-ring": primary,
+    "--radius": "0.125rem",
+    "--font-sans": sansFont,
+    "--font-mono": monoFont,
+    "--shadow-color": "rgba(0, 0, 0, 0.1)",
+    "--shadow-opacity": "0.05",
+    "--shadow-blur": "4px",
+    "--shadow-spread": "0px",
+    "--shadow-offset-x": "0px",
+    "--shadow-offset-y": "1px",
+    "--letter-spacing": "0.0125em",
   };
 }
 
@@ -50,7 +78,55 @@ function builtIn(schemeId: string, name: string, colors: string[]): ColorSchemeD
 }
 
 export const BUILT_IN_SCHEMES: ColorSchemeDefinition[] = [
-  builtIn("light", "Light", ["#ffffff", "#f4f4f5", "#e4e4e7", "#18181b", "#52525b"]),
+  {
+    schemeId: "light",
+    name: "Light",
+    colors: ["#ffffff", "#f4f4f5", "#e4e4e7", "#1f6feb", "#52525b"],
+    css: {
+      "--background": "hsl(0 0% 100%)",
+      "--foreground": "hsl(0 0% 15%)",
+      "--card": "hsl(0 0% 100%)",
+      "--card-foreground": "hsl(0 0% 15%)",
+      "--popover": "hsl(0 0% 100%)",
+      "--popover-foreground": "hsl(0 0% 15%)",
+      "--primary": "hsl(214 85% 45%)",
+      "--primary-foreground": "hsl(0 0% 100%)",
+      "--secondary": "hsl(210 20% 96%)",
+      "--secondary-foreground": "hsl(0 0% 15%)",
+      "--muted": "hsl(0 0% 96%)",
+      "--muted-foreground": "hsl(0 0% 45%)",
+      "--accent": "hsl(214 85% 96%)",
+      "--accent-foreground": "hsl(214 85% 35%)",
+      "--destructive": "hsl(0 84% 44%)",
+      "--destructive-foreground": "hsl(0 0% 100%)",
+      "--border": "hsl(0 0% 82%)",
+      "--input": "hsl(0 0% 90%)",
+      "--ring": "hsl(214 85% 45%)",
+      "--chart-1": "hsl(214 85% 45%)",
+      "--chart-2": "hsl(160 84% 39%)",
+      "--chart-3": "hsl(30 95% 45%)",
+      "--chart-4": "hsl(280 75% 55%)",
+      "--chart-5": "hsl(340 85% 50%)",
+      "--sidebar": "hsl(0 0% 98%)",
+      "--sidebar-foreground": "hsl(0 0% 25%)",
+      "--sidebar-primary": "hsl(214 85% 45%)",
+      "--sidebar-primary-foreground": "hsl(0 0% 100%)",
+      "--sidebar-accent": "hsl(214 40% 94%)",
+      "--sidebar-accent-foreground": "hsl(214 85% 35%)",
+      "--sidebar-border": "hsl(0 0% 90%)",
+      "--sidebar-ring": "hsl(214 85% 45%)",
+      "--radius": "0.125rem",
+      "--font-sans": '"Inter", "Segoe UI", "Helvetica Neue", sans-serif',
+      "--font-mono": '"Geist Mono", monospace',
+      "--shadow-color": "rgba(0, 0, 0, 0.1)",
+      "--shadow-opacity": "0.05",
+      "--shadow-blur": "4px",
+      "--shadow-spread": "0px",
+      "--shadow-offset-x": "0px",
+      "--shadow-offset-y": "1px",
+      "--letter-spacing": "0.0125em",
+    },
+  },
   builtIn("ocean", "Ocean", ["#0f3b5c", "#2a6f97", "#89c2d9", "#1d6fb8", "#0a2540"]),
   builtIn("forest", "Forest", ["#1b3a2b", "#2d6a4f", "#95d5b2", "#40916c", "#081c15"]),
   builtIn("sunset", "Sunset", ["#5c1a1a", "#b03a2e", "#f4a261", "#e76f51", "#421010"]),
