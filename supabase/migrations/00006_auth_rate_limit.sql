@@ -35,5 +35,6 @@ $$;
 -- the no-RLS reality. Defense-in-depth for any authenticated role.
 alter table public.tblAuthAttempts enable row level security;
 
+drop policy if exists "auth_attempts_app" on public.tblAuthAttempts;
 create policy "auth_attempts_app" on public.tblAuthAttempts
   for all to authenticated using (true) with check (true);
