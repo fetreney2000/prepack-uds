@@ -50,7 +50,7 @@ function builtIn(schemeId: string, name: string, colors: string[]): ColorSchemeD
 }
 
 export const BUILT_IN_SCHEMES: ColorSchemeDefinition[] = [
-  builtIn("earthy", "Earthy", ["#5b4433", "#8a6b4f", "#d9c3a3", "#3a7d44", "#6b4f3a"]),
+  builtIn("light", "Light", ["#ffffff", "#f4f4f5", "#e4e4e7", "#18181b", "#52525b"]),
   builtIn("ocean", "Ocean", ["#0f3b5c", "#2a6f97", "#89c2d9", "#1d6fb8", "#0a2540"]),
   builtIn("forest", "Forest", ["#1b3a2b", "#2d6a4f", "#95d5b2", "#40916c", "#081c15"]),
   builtIn("sunset", "Sunset", ["#5c1a1a", "#b03a2e", "#f4a261", "#e76f51", "#421010"]),

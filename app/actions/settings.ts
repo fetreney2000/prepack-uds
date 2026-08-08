@@ -228,7 +228,7 @@ export async function getActiveColorScheme(): Promise<ActionResult<string>> {
     .eq("settingKey", "color_scheme")
     .maybeSingle();
   if (error) return { ok: false, error: error.message };
-  return { ok: true, data: data?.settingValue ?? "earthy" };
+  return { ok: true, data: data?.settingValue ?? "light" };
 }
 
 /** Set the active color scheme id (upsert). */
@@ -317,9 +317,9 @@ export async function createCustomColorScheme(input: {
 
 /**
  * Delete a custom color scheme. If it was the active scheme, reset the
- * active scheme to 'earthy' (both DB + client).
+ * active scheme to 'light' (both DB + client).
  */
-export async function deleteCustomColorScheme(id: number): Promise<ActionResult<{ resetToEarthy: boolean }>> {
+export async function deleteCustomColorScheme(id: number): Promise<ActionResult<{ resetToLight: boolean }>> {
   const supabase = createAdminClient();
 
   const { data: target } = await supabase
@@ -331,20 +331,20 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
   const { error } = await supabase.from("tblColorSchemes").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
 
-  let resetToEarthy = false;
+  let resetToLight = false;
   if (target) {
     const active = await getActiveColorScheme();
     if (active.ok && active.data === target.schemeId) {
       await supabase
         .from("tblSystemSettings")
         .upsert(
-          { settingKey: "color_scheme", settingValue: "earthy" },
+          { settingKey: "color_scheme", settingValue: "light" },
           { onConflict: "settingKey" },
         );
-      resetToEarthy = true;
+      resetToLight = true;
     }
   }
 
   revalidatePath("/tetapan");
-  return { ok: true, data: { resetToEarthy } };
+  return { ok: true, data: { resetToLight } };
 }

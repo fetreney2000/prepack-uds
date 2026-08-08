@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 // Inline pre-render script: apply cached color-scheme CSS vars before
 // React hydrates (mirrors the original's inline script in index.pug).
-const colorPreload = `(function(){try{var s=localStorage.getItem("prepack-color-scheme")||"earthy";var v=JSON.parse(localStorage.getItem("prepack-color-vars")||"{}");var r=document.documentElement;for(var k in v){if(Object.prototype.hasOwnProperty.call(v,k)){r.style.setProperty(k,v[k]);}}r.dataset.colorScheme=s;}catch(e){}})();`;
+const colorPreload = `(function(){try{var s=localStorage.getItem("prepack-color-scheme")||"light";var v=JSON.parse(localStorage.getItem("prepack-color-vars")||"{}");var r=document.documentElement;for(var k in v){if(Object.prototype.hasOwnProperty.call(v,k)){r.style.setProperty(k,v[k]);}}r.dataset.colorScheme=s;}catch(e){}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

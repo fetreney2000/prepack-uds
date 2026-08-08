@@ -75,8 +75,8 @@ insert into public.tblUnitPKU (nama) values
 -- admin_password placeholder: replaced by seed.ts.
 insert into public.tblSystemSettings (settingKey, settingValue) values
   ('admin_password', '__ADMIN_HASH__'),
-  ('color_scheme',   'earthy');
+  ('color_scheme',   'light');
 
--- ---------- tblColorSchemes: default built-in (earthy) ----------
+-- ---------- tblColorSchemes: default built-in (light) ----------
 insert into public.tblColorSchemes (schemeId, name, colors, css, isBuiltIn) values
-  ('earthy', 'Earthy', '["#5b4433","#8a6b4f","#d9c3a3","#3a7d44","#6b4f3a"]', '{"--background":"#f7f3ec","--foreground":"#2b241c","--primary":"#3a7d44","--primary-foreground":"#ffffff","--accent":"#d9c3a3","--surface-alt":"#8a6b4f","--text-primary":"#2b241c","--text-secondary":"#5b4433","--border":"#d9c3a3","--ring":"#3a7d44","--card":"#ffffff","--card-foreground":"#2b241c","--popover":"#ffffff","--popover-foreground":"#2b241c","--secondary":"#8a6b4f","--secondary-foreground":"#ffffff","--muted":"#f1ece3","--muted-foreground":"#6b5b4d","--destructive":"#d33","--destructive-foreground":"#ffffff","--input":"#d9c3a3","--radius":"0.5rem"}', 1);
+  ('light', 'Light', '["#ffffff","#f4f4f5","#e4e4e7","#18181b","#52525b"]', '{"--background":"#ffffff","--foreground":"#f5f5f5","--primary":"#18181b","--primary-foreground":"#ffffff","--accent":"#e4e4e7","--accent-foreground":"#f5f5f5","--surface-alt":"#f4f4f5","--text-primary":"#52525b","--text-secondary":"#52525b","--border":"#e4e4e7","--ring":"#18181b","--card":"#ffffff","--card-foreground":"#f5f5f5","--popover":"#ffffff","--popover-foreground":"#f5f5f5","--secondary":"#f4f4f5","--secondary-foreground":"#f5f5f5","--muted":"#f4f4f5","--muted-foreground":"#52525b","--destructive":"#d33","--destructive-foreground":"#ffffff","--input":"#e4e4e7","--radius":"0.5rem"}', 1);

@@ -26,7 +26,7 @@ export function ColorSchemeProvider({ children }: { children: ReactNode }) {
         listCustomColorSchemes(),
       ]);
       if (cancelled) return;
-      const activeId = activeRes.ok && activeRes.data ? activeRes.data : "earthy";
+      const activeId = activeRes.ok && activeRes.data ? activeRes.data : "light";
 
       // Build the full scheme map: built-ins + custom (custom override).
       const map = new Map<string, { schemeId: string; css: Record<string, string> }>();
@@ -35,7 +35,7 @@ export function ColorSchemeProvider({ children }: { children: ReactNode }) {
         for (const s of customRes.data) map.set(s.schemeId, s);
       }
 
-      const scheme = map.get(activeId) ?? findBuiltInScheme("earthy");
+      const scheme = map.get(activeId) ?? findBuiltInScheme("light");
       if (scheme) {
         setActiveScheme(scheme.schemeId, scheme.css);
       }

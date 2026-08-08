@@ -7,7 +7,7 @@ import { create } from "zustand";
 
 export const COLOR_VARS_KEY = "prepack-color-vars";
 export const COLOR_SCHEME_KEY = "prepack-color-scheme";
-export const FALLBACK_SCHEME_ID = "earthy";
+export const FALLBACK_SCHEME_ID = "light";
 
 export interface ColorSchemeDefinition {
   schemeId: string;
