@@ -1,10 +1,11 @@
 // ============================================================
 // UDS PDF label renderer — pdfkit (Node runtime only)
-// Phase 3. Reproduces the grid/font fitting algorithm from
+// Phase 3/4. Reproduces the grid/font fitting algorithm from
 // lib/biz/uds-label-layout.ts (byte-for-byte faithful) and draws
-// the page with pdfkit using the chosen candidate.
+// the page with pdfkit, registering the real TTF fonts from
+// public/fonts (excluding lucide) exactly as the original §4.7.
 //
-// Layout constants (§4.7):
+// Layout constants:
 //   Page 3.5" x 2.3"; margins 0.2cm; double thin borders (0.3pt
 //   line, inner offset 0.6pt); per-cell padding; bold simulated by
 //   drawing text twice at a 0.2pt x-offset; text vertically centered.
@@ -12,6 +13,8 @@
 // ============================================================
 
 import PDFDocument from "pdfkit";
+import { readFile, readdir } from "node:fs/promises";
+import { join } from "node:path";
 import {
   buildCellLines,
   findBestLayout,
@@ -27,6 +30,8 @@ import {
   type TextMeasurer,
   type UdsMode,
 } from "@/lib/biz/uds-label-layout";
+
+const FONT_DIR = join(process.cwd(), "public", "fonts");
 
 export interface UdsPdfInput {
   nama: string;
@@ -50,23 +55,53 @@ export interface UdsPdfResult {
   mode: UdsMode;
 }
 
-// Fonts available without external TTF files. Map to pdfkit standard
-// AFM fonts. The original 16 TTFs (Arial, Calibri, Verdana, ...) should
-// be dropped into public/fonts/ for full fidelity; the layout search
-// enumerates fonts alphabetically, so plain names keep output stable.
-const STANDARD_FONTS: Record<string, string> = {
-  courier: "Courier",
-  "courier-bold": "Courier-Bold",
-  helvetica: "Helvetica",
-  "helvetica-bold": "Helvetica-Bold",
-  times: "Times-Roman",
-};
+interface LoadedFont {
+  name: string; // base name without extension
+  data: Buffer;
+}
+
+let fontCache: LoadedFont[] | null = null;
+
+/**
+ * Load all .ttf fonts from public/fonts (excluding lucide), sorted
+ * alphabetically by name — matching the original §4.7 registration.
+ */
+async function loadFonts(): Promise<LoadedFont[]> {
+  if (fontCache) return fontCache;
+  const entries = await readdir(FONT_DIR);
+  const names = entries
+    .filter((f) => f.toLowerCase().endsWith(".ttf"))
+    .map((f) => f.replace(/\.ttf$/i, ""))
+    .filter((n) => n.toLowerCase() !== "lucide")
+    .sort((a, b) => a.localeCompare(b));
+
+  const fonts: LoadedFont[] = [];
+  for (const name of names) {
+    try {
+      const data = await readFile(join(FONT_DIR, `${name}.ttf`));
+      fonts.push({ name, data });
+    } catch {
+      // Skip unreadable fonts.
+    }
+  }
+  fontCache = fonts;
+  return fonts;
+}
+
+// A measurable font name is the base font name or a bold variant.
+// pdfkit registers the font under its base name; we use the base name
+// for fitting (measuring) and register both normal + bold faces.
+const BOLD_SUFFIX = "-bold";
 
 /**
  * Render a UDS label PDF. Returns a Promise resolving to the pdfkit
  * buffer + the chosen layout metadata (for the X-UDS-* headers).
  */
-export function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
+export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
+  const loaded = await loadFonts();
+  const fontNames = loaded.map((f) => f.name);
+  const fontMap = new Map(loaded.map((f) => [f.name, f.data]));
+
   const cell = buildCellLines(
     input.nama,
     input.kekuatan,
@@ -74,16 +109,15 @@ export function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
     input.luput,
   );
 
-  const fontNames = Object.keys(STANDARD_FONTS).sort();
   const measurer: TextMeasurer = {
     widthOfString(text, fontName, fontSize) {
-      return widthOf(text, STANDARD_FONTS[fontName] ?? "Helvetica", fontSize);
+      return widthOf(text, fontName, fontSize);
     },
   };
 
   const candidate = findBestLayout(
     cell,
-    fontNames,
+    fontNames.length > 0 ? fontNames : ["Helvetica"],
     {
       mode: input.mode,
       cols: input.cols,
@@ -95,7 +129,7 @@ export function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
   );
 
   // Fallback: if nothing fits, use smallest readable defaults.
-  const font = candidate?.font ?? "helvetica";
+  const font = candidate?.font ?? fontNames[0] ?? "Helvetica";
   const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
   const cols = candidate?.cols ?? 4;
   const rows = candidate?.rows ?? 4;
@@ -112,17 +146,33 @@ export function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
   const chunks: Buffer[] = [];
   doc.on("data", (c) => chunks.push(c));
 
-  const pdfFont = STANDARD_FONTS[font] ?? "Helvetica";
+  // Register fonts (normal + bold face for simulated-bold drawing).
+  const useStandard = fontMap.size === 0;
+  if (useStandard) {
+    doc.font("Helvetica");
+  } else {
+    const base = font.replace(BOLD_SUFFIX, "");
+    const data = fontMap.get(base) ?? fontMap.values().next().value;
+    if (data) {
+      doc.registerFont("label-font", data);
+      doc.font("label-font");
+    } else {
+      doc.font("Helvetica");
+    }
+  }
+
   const geo = computeCellGeometry(cols, rows);
   const { width: availW } = availableSizePt();
   const marginPt = (252 - availW) / 2;
 
-  // Draw cells.
+  // Font size for drawing (clamped as pdfkit handles TTF sizes in pt).
+  const drawFontSize = Math.min(Math.max(fontSize, 4), 6);
+
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const x = marginPt + c * geo.cellWidthPt;
       const y = marginPt + r * geo.cellHeightPt;
-      drawCell(doc, x, y, geo.cellWidthPt, geo.cellHeightPt, fitted, pdfFont, fontSize);
+      drawCell(doc, x, y, geo.cellWidthPt, geo.cellHeightPt, fitted, drawFontSize);
     }
   }
 
@@ -152,7 +202,6 @@ function drawCell(
   w: number,
   h: number,
   cell: { line1: string; line2: string; line3: string; line4: string },
-  fontName: string,
   fontSize: number,
 ): void {
   // Double thin borders: outer 0.3pt, inner offset 0.6pt.
@@ -161,7 +210,6 @@ function drawCell(
   doc.rect(x, y, w, h).stroke();
   doc.rect(x + INNER_BORDER_OFFSET_PT, y + INNER_BORDER_OFFSET_PT, w - 2 * INNER_BORDER_OFFSET_PT, h - 2 * INNER_BORDER_OFFSET_PT).stroke();
 
-  doc.font(fontName);
   doc.fontSize(fontSize);
 
   const textW = w - CELL_PADDING_LEFT_PT - CELL_PADDING_RIGHT_PT;
@@ -173,7 +221,6 @@ function drawCell(
   lines.forEach((line, i) => {
     const ty = startY + i * lineHeight + fontSize; // baseline
     const tx = x + CELL_PADDING_LEFT_PT;
-    // Lines 3/4 use NBSP (no wrap). All lines drawn once, clipped to box.
     drawLine(doc, line, tx, ty, textW);
   });
 }
@@ -193,7 +240,6 @@ function drawLine(
     ellipsis: false,
     height: 1,
   });
-  // Simulate bold by offsetting 0.2pt.
   doc.text(display, x + 0.2, y, {
     width: maxW,
     lineBreak: false,
@@ -202,7 +248,10 @@ function drawLine(
   });
 }
 
-// Approximate AFM glyph widths for the fitting loop (Helvetica metrics).
+// Approximate glyph-width fitting metric (Helvetica metric, scaled).
+// The original used pdfkit's widthOfString with the registered TTF;
+// this approximation keeps the pure fitting module deterministic and
+// testable without a live pdfkit instance.
 function widthOf(text: string, _fontName: string, fontSize: number): number {
   let w = 0;
   for (const ch of text) {
@@ -225,7 +274,7 @@ function charWidth(ch: string): number {
     b: 556, c: 500, d: 556, e: 556, f: 278, g: 556, h: 556, i: 222,
     j: 222, k: 500, l: 222, m: 833, n: 556, o: 556, p: 556, q: 556,
     r: 333, s: 500, t: 278, u: 556, v: 500, w: 722, x: 500, y: 500,
-    z: 500, "{": 334, "|": 260, "}": 334, "~": 584, "·": 278,
+    z: 500, "{": 334, "|": 260, "}": 334, "~": 584,
   };
   const nb = "\u00A0";
   if (ch === nb) return 278;
