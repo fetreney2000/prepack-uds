@@ -82,6 +82,20 @@ async function insertPreservingId(
 // ---------- Main ----------
 
 async function main() {
+  // 0. Ensure the UDS label PDF caching bucket exists (free-tier safe).
+  const { data: buckets } = await admin.storage.listBuckets();
+  if (!buckets?.some((b) => b.name === "uds-labels")) {
+    const { error } = await admin.storage.createBucket("uds-labels", {
+      public: true,
+      fileSizeLimit: 5 * 1024 * 1024,
+    });
+    if (error) {
+      console.error("Failed to create uds-labels bucket:", error.message);
+    } else {
+      console.log("Storage bucket 'uds-labels' created.");
+    }
+  }
+
   // 1. Ensure admin password (default farmasi456)
   const { data: existing } = await admin
     .from("tblSystemSettings")

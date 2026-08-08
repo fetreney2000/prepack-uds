@@ -6,6 +6,7 @@ import { parseLuputToISO } from "@/lib/biz/luput";
 
 const isoDate = z
   .string()
+  .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Tarikh mesti dalam format YYYY-MM-DD");
 
 const intOrNull = z
@@ -120,6 +121,21 @@ export const runningNumberInputSchema = z.object({
 });
 
 export type RunningNumberInput = z.infer<typeof runningNumberInputSchema>;
+
+// ---------- Auth ----------
+
+export const verifyPasswordSchema = z.object({
+  password: z.string().max(200, "Kata laluan terlalu panjang"),
+});
+
+export const changePasswordSchema = z.object({
+  current: z.string().max(200, "Kata laluan terlalu panjang"),
+  next: z
+    .string()
+    .trim()
+    .min(6, "Kata laluan baharu mestilah sekurang-kurangnya 6 aksara")
+    .max(200, "Kata laluan terlalu panjang"),
+});
 
 // ---------- UDS normalization helper ----------
 // Mirrors the server-side trim().toUpperCase() + canonical-name override.
