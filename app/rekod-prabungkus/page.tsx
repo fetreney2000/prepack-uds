@@ -9,7 +9,30 @@ import { usePrabungkusList, type PrabungkusRecord } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { ArrowUpDown, FileText, MoreHorizontal, Printer } from "lucide-react";
+
+/** Trigger a download of the worksheet or label DOCX (download-only). */
+function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord) {
+  const url = `/api/document/${kind}/${record.ID}`;
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  toast.success(
+    kind === "worksheet"
+      ? `Kertas kerja ${record.idPrabungkus} sedang dimuat turun.`
+      : `Label ${record.idPrabungkus} sedang dimuat turun.`,
+  );
+}
 
 export default function RekodPrabungkusPage() {
   const { data, isLoading, isError, error } = usePrabungkusList();
@@ -54,6 +77,35 @@ export default function RekodPrabungkusPage() {
           </Button>
         ),
         cell: ({ row }) => row.original.jumlahPekDihasilkan ?? "—",
+      },
+      {
+        id: "actions",
+        header: "Cetak",
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon" aria-label="Cetak dokumen" />
+              }
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => downloadDocument("worksheet", row.original)}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Kertas Kerja
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => downloadDocument("label", row.original)}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Label
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
       },
     ],
     [],
