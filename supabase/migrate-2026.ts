@@ -125,15 +125,15 @@ async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
 async function main() {
   // 1. Clear existing data (FK-safe order: children before parents).
   console.log("=== Clearing existing Supabase data ===");
-  await deleteAll("public.tblSenaraiPrabungkus");
-  await deleteAll("public.tblSenaraiUbat");
-  await deleteAll("public.tblJenisWorksheet");
-  await deleteAll("public.tblJenisLabel");
-  await deleteAll("public.tblKategoriUbat");
-  await deleteAll("public.tblUnitSKU");
-  await deleteAll("public.tblUnitPKU");
-  await deleteAll("public.tblSystemSettings", "settingKey");
-  await deleteAll("public.tblColorSchemes");
+  await deleteAll("tblSenaraiPrabungkus");
+  await deleteAll("tblSenaraiUbat");
+  await deleteAll("tblJenisWorksheet");
+  await deleteAll("tblJenisLabel");
+  await deleteAll("tblKategoriUbat");
+  await deleteAll("tblUnitSKU");
+  await deleteAll("tblUnitPKU");
+  await deleteAll("tblSystemSettings", "settingKey");
+  await deleteAll("tblColorSchemes");
   await deleteAll("uds.tblRekodLabel");
   await deleteAll("uds.tblNamaUbat");
 
@@ -158,11 +158,11 @@ async function main() {
 
   // 2. Lookup tables (no date filter) — migrate all rows.
   console.log("\n=== Migrating lookup tables (all rows) ===");
-  await insertRows("public.tblJenisLabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"));
-  await insertRows("public.tblJenisWorksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"));
-  await insertRows("public.tblKategoriUbat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"));
-  await insertRows("public.tblUnitSKU", readAll(prepackDb, "SELECT * FROM tblUnitSKU"));
-  await insertRows("public.tblUnitPKU", readAll(prepackDb, "SELECT * FROM tblUnitPKU"));
+  await insertRows("tblJenisLabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"));
+  await insertRows("tblJenisWorksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"));
+  await insertRows("tblKategoriUbat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"));
+  await insertRows("tblUnitSKU", readAll(prepackDb, "SELECT * FROM tblUnitSKU"));
+  await insertRows("tblUnitPKU", readAll(prepackDb, "SELECT * FROM tblUnitPKU"));
 
   // 3. tblSenaraiUbat — only meds referenced by 2026 records.
   console.log("\n=== Migrating medications referenced by 2026 records ===");
@@ -179,7 +179,7 @@ async function main() {
     prepackDb,
     `SELECT * FROM tblSenaraiPrabungkus WHERE substr(tarikh,1,4)='${TARGET_YEAR}'`,
   );
-  await insertRows("public.tblSenaraiPrabungkus", prabungkusRows);
+  await insertRows("tblSenaraiPrabungkus", prabungkusRows);
 
   // 5. uds.tblNamaUbat — only meds referenced by 2026 labels.
   console.log("\n=== Migrating UDS meds referenced by 2026 labels ===");
@@ -222,7 +222,7 @@ async function main() {
     { settingKey: "admin_password", settingValue: hashPassword("farmasi456") },
     { settingKey: "color_scheme", settingValue: "light" },
   ];
-  const { error: settingsErr } = await admin.from("public.tblSystemSettings").insert(settings);
+  const { error: settingsErr } = await admin.from("tblSystemSettings").insert(settings);
   if (settingsErr) {
     console.error(`  [tblSystemSettings] FAILED: ${settingsErr.message}`);
   } else {
@@ -256,7 +256,7 @@ async function insertReferencedMeds(
     if (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
     stmt.free();
   }
-  await insertRows("public.tblSenaraiUbat", rows);
+  await insertRows("tblSenaraiUbat", rows);
 }
 
 async function insertReferencedUdsMeds(
