@@ -74,11 +74,18 @@ async function insertRows(
     console.log(`  [${table}] 0 rows`);
     return;
   }
+  // PostgREST exposes columns in lowercase (identifier folding), so
+  // lowercase every key before insert.
+  const normalized = rows.map((r) => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(r)) out[k.toLowerCase()] = v;
+    return out;
+  });
   // Insert in chunks to stay comfortably within header/payload limits.
   const CHUNK = 200;
   let inserted = 0;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK);
+  for (let i = 0; i < normalized.length; i += CHUNK) {
+    const chunk = normalized.slice(i, i + CHUNK);
     const { error } = await admin.from(table).insert(chunk);
     if (error) {
       console.error(`  [${table}] FAILED: ${error.message}`);
@@ -89,9 +96,9 @@ async function insertRows(
   console.log(`  [${table}] inserted ${inserted} rows (IDs preserved)`);
 }
 
-async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
+async function deleteAll(table: string, pkColumn = "id"): Promise<void> {
   // Fetch all primary keys, then delete in batches (handles tables
-  // without an ID column, e.g. tblSystemSettings uses settingKey).
+  // without an ID column, e.g. tblSystemSettings uses settingkey).
   const { data: rows, error: selErr } = await admin
     .from(table)
     .select(pkColumn);
@@ -132,7 +139,7 @@ async function main() {
   await deleteAll("tblkategoriubat");
   await deleteAll("tblunitsku");
   await deleteAll("tblunitpku");
-  await deleteAll("tblsystemsettings", "settingKey");
+  await deleteAll("tblsystemsettings", "settingkey");
   await deleteAll("tblcolorschemes");
   await deleteAll("uds.tblrekodlabel");
   await deleteAll("uds.tblnamaubat");
@@ -216,11 +223,11 @@ async function main() {
     0,
   );
 
-  const settings: { settingKey: string; settingValue: string }[] = [
-    { settingKey: `running_number_${TARGET_YEAR}`, settingValue: String(maxPrepack + 1) },
-    { settingKey: `running_number_uds_${TARGET_YEAR}`, settingValue: String(maxUds + 1) },
-    { settingKey: "admin_password", settingValue: hashPassword("farmasi456") },
-    { settingKey: "color_scheme", settingValue: "light" },
+  const settings: { settingkey: string; settingvalue: string }[] = [
+    { settingkey: `running_number_${TARGET_YEAR}`, settingvalue: String(maxPrepack + 1) },
+    { settingkey: `running_number_uds_${TARGET_YEAR}`, settingvalue: String(maxUds + 1) },
+    { settingkey: "admin_password", settingvalue: hashPassword("farmasi456") },
+    { settingkey: "color_scheme", settingvalue: "light" },
   ];
   const { error: settingsErr } = await admin.from("tblsystemsettings").insert(settings);
   if (settingsErr) {
