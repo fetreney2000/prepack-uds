@@ -687,3 +687,28 @@ $$;
 -- ============================================================
 -- End of consolidated schema
 -- ============================================================
+
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+-- SECTION 8: privileges (GRANTs)
+-- Tables created via raw SQL do not inherit Supabase's default
+-- grants. The service_role (used by Server Actions + migration
+-- scripts) and anon/authenticated (RLS) roles need explicit access.
+-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+-- Row-level objects (tables, sequences, indexes)
+grant usage on schema public to anon, authenticated, service_role;
+grant usage on schema uds to anon, authenticated, service_role;
+
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema uds grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema uds grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema uds grant all on functions to anon, authenticated, service_role;
+
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all tables in schema uds to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema uds to anon, authenticated, service_role;
+grant execute on all functions in schema public to anon, authenticated, service_role;
+grant execute on all functions in schema uds to anon, authenticated, service_role;
