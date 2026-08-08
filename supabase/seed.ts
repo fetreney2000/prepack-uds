@@ -58,18 +58,17 @@ async function openSqlite(dbPath?: string): Promise<Database | null> {
   return new SQL.Database(file);
 }
 
-function readAll(db: Database, sql: string): any[] {
+function readAll(db: Database, sql: string): Record<string, unknown>[] {
   const stmt = db.prepare(sql);
-  const rows: any[] = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
+  const rows: Record<string, unknown>[] = [];
+  while (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
   stmt.free();
   return rows;
 }
 
 async function insertPreservingId(
   table: string,
-  rows: any[],
-  idColumn = "ID",
+  rows: Record<string, unknown>[],
 ): Promise<void> {
   if (rows.length === 0) return;
   const { error } = await admin.from(table).insert(rows);
