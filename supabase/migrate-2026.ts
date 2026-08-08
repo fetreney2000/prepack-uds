@@ -1,5 +1,5 @@
-// ============================================================
-// Migration script — import ONLY 2026 data from the original
+﻿// ============================================================
+// Migration script â€” import ONLY 2026 data from the original
 // SQLite databases into Supabase.
 //
 // Behavior:
@@ -125,17 +125,17 @@ async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
 async function main() {
   // 1. Clear existing data (FK-safe order: children before parents).
   console.log("=== Clearing existing Supabase data ===");
-  await deleteAll("tblSenaraiPrabungkus");
-  await deleteAll("tblSenaraiUbat");
-  await deleteAll("tblJenisWorksheet");
-  await deleteAll("tblJenisLabel");
-  await deleteAll("tblKategoriUbat");
-  await deleteAll("tblUnitSKU");
-  await deleteAll("tblUnitPKU");
-  await deleteAll("tblSystemSettings", "settingKey");
-  await deleteAll("tblColorSchemes");
-  await deleteAll("uds.tblRekodLabel");
-  await deleteAll("uds.tblNamaUbat");
+  await deleteAll("tblsenaraiprabungkus");
+  await deleteAll("tblsenaraiubat");
+  await deleteAll("tbljenisworksheet");
+  await deleteAll("tbljenislabel");
+  await deleteAll("tblkategoriubat");
+  await deleteAll("tblunitsku");
+  await deleteAll("tblunitpku");
+  await deleteAll("tblsystemsettings", "settingKey");
+  await deleteAll("tblcolorschemes");
+  await deleteAll("uds.tblrekodlabel");
+  await deleteAll("uds.tblnamaubat");
 
   // Clear Storage cache bucket objects (best-effort).
   try {
@@ -145,7 +145,7 @@ async function main() {
       console.log("  [uds-labels] cleared cached PDFs");
     }
   } catch {
-    console.log("  [uds-labels] bucket absent — nothing to clear");
+    console.log("  [uds-labels] bucket absent â€” nothing to clear");
   }
 
   if (!existsSync(PREPACK_DB) || !existsSync(UDS_DB)) {
@@ -156,15 +156,15 @@ async function main() {
   const prepackDb = await openSqlite(PREPACK_DB);
   const udsDb = await openSqlite(UDS_DB);
 
-  // 2. Lookup tables (no date filter) — migrate all rows.
+  // 2. Lookup tables (no date filter) â€” migrate all rows.
   console.log("\n=== Migrating lookup tables (all rows) ===");
-  await insertRows("tblJenisLabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"));
-  await insertRows("tblJenisWorksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"));
-  await insertRows("tblKategoriUbat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"));
-  await insertRows("tblUnitSKU", readAll(prepackDb, "SELECT * FROM tblUnitSKU"));
-  await insertRows("tblUnitPKU", readAll(prepackDb, "SELECT * FROM tblUnitPKU"));
+  await insertRows("tbljenislabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"));
+  await insertRows("tbljenisworksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"));
+  await insertRows("tblkategoriubat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"));
+  await insertRows("tblunitsku", readAll(prepackDb, "SELECT * FROM tblUnitSKU"));
+  await insertRows("tblunitpku", readAll(prepackDb, "SELECT * FROM tblUnitPKU"));
 
-  // 3. tblSenaraiUbat — only meds referenced by 2026 records.
+  // 3. tblSenaraiUbat â€” only meds referenced by 2026 records.
   console.log("\n=== Migrating medications referenced by 2026 records ===");
   const ubatIds = readAll(
     prepackDb,
@@ -173,15 +173,15 @@ async function main() {
   ).map((r) => r.id as number);
   await insertReferencedMeds(prepackDb, ubatIds);
 
-  // 4. tblSenaraiPrabungkus — 2026 records only.
+  // 4. tblSenaraiPrabungkus â€” 2026 records only.
   console.log("\n=== Migrating 2026 prepack records ===");
   const prabungkusRows = readAll(
     prepackDb,
     `SELECT * FROM tblSenaraiPrabungkus WHERE substr(tarikh,1,4)='${TARGET_YEAR}'`,
   );
-  await insertRows("tblSenaraiPrabungkus", prabungkusRows);
+  await insertRows("tblsenaraiprabungkus", prabungkusRows);
 
-  // 5. uds.tblNamaUbat — only meds referenced by 2026 labels.
+  // 5. uds.tblNamaUbat â€” only meds referenced by 2026 labels.
   console.log("\n=== Migrating UDS meds referenced by 2026 labels ===");
   const namaUbatIds = readAll(
     udsDb,
@@ -190,16 +190,16 @@ async function main() {
   ).map((r) => r.id as number);
   await insertReferencedUdsMeds(udsDb, namaUbatIds);
 
-  // 6. uds.tblRekodLabel — 2026 records only.
+  // 6. uds.tblRekodLabel â€” 2026 records only.
   console.log("\n=== Migrating 2026 UDS labels ===");
   const rekodRows = readAll(
     udsDb,
     `SELECT "ID","Tarikh","Rujukan","NamaUbat","Kekuatan","Kelompok","Luput","Kuantiti","Penyedia","LuputNormalized","NamaUbatID"
      FROM tblRekodLabel WHERE substr("Tarikh",1,4)='${TARGET_YEAR}'`,
   );
-  await insertRows("uds.tblRekodLabel", rekodRows);
+  await insertRows("uds.tblrekodlabel", rekodRows);
 
-  // 7. tblSystemSettings — year-scoped running numbers + defaults.
+  // 7. tblSystemSettings â€” year-scoped running numbers + defaults.
   console.log("\n=== Setting year-scoped running numbers ===");
   const maxPrepack = Math.max(
     ...prabungkusRows.map((r) => {
@@ -222,7 +222,7 @@ async function main() {
     { settingKey: "admin_password", settingValue: hashPassword("farmasi456") },
     { settingKey: "color_scheme", settingValue: "light" },
   ];
-  const { error: settingsErr } = await admin.from("tblSystemSettings").insert(settings);
+  const { error: settingsErr } = await admin.from("tblsystemsettings").insert(settings);
   if (settingsErr) {
     console.error(`  [tblSystemSettings] FAILED: ${settingsErr.message}`);
   } else {
@@ -256,7 +256,7 @@ async function insertReferencedMeds(
     if (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
     stmt.free();
   }
-  await insertRows("tblSenaraiUbat", rows);
+  await insertRows("tblsenaraiubat", rows);
 }
 
 async function insertReferencedUdsMeds(
@@ -274,10 +274,11 @@ async function insertReferencedUdsMeds(
     if (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
     stmt.free();
   }
-  await insertRows("uds.tblNamaUbat", rows);
+  await insertRows("uds.tblnamaubat", rows);
 }
 
 main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
