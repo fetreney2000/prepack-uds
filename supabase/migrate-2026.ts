@@ -1,5 +1,5 @@
-ï»¿// ============================================================
-// Migration script â€” import ONLY 2026 data from the original
+// ============================================================
+// Migration script — import ONLY 2026 data from the original
 // SQLite databases into Supabase.
 //
 // Behavior:
@@ -47,6 +47,13 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// Client bound to the `uds` schema (PostgREST does not accept
+// schema-prefixed table names like "uds.tblX" in the URL path).
+const udsAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+  db: { schema: "uds" },
+});
+
 // ---------- Helpers ----------
 
 function hashPassword(password: string): string {
@@ -69,6 +76,7 @@ function readAll(db: Database, sql: string): Record<string, unknown>[] {
 }
 
 async function insertRows(
+  client: any,
   table: string,
   rows: Record<string, unknown>[],
   remap?: Record<string, string>,
@@ -89,7 +97,7 @@ async function insertRows(
   let inserted = 0;
   for (let i = 0; i < normalized.length; i += CHUNK) {
     const chunk = normalized.slice(i, i + CHUNK);
-    const { error } = await admin.from(table).insert(chunk);
+    const { error } = await client.from(table).insert(chunk);
     if (error) {
       console.error(`  [${table}] FAILED: ${error.message}`);
       return;
@@ -99,8 +107,12 @@ async function insertRows(
   console.log(`  [${table}] inserted ${inserted} rows (IDs preserved)`);
 }
 
-async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
-  const { data: rows, error: selErr } = await admin
+async function deleteAll(
+  client: any,
+  table: string,
+  pkColumn = "ID",
+): Promise<void> {
+  const { data: rows, error: selErr } = await client
     .from(table)
     .select(pkColumn);
   if (selErr) {
@@ -118,7 +130,7 @@ async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
   let ok = 0;
   for (let i = 0; i < keys.length; i += CHUNK) {
     const chunkKeys = keys.slice(i, i + CHUNK);
-    const { error } = await admin.from(table).delete().in(pkColumn, chunkKeys);
+    const { error } = await client.from(table).delete().in(pkColumn, chunkKeys);
     if (error) {
       console.error(`  [${table}] delete failed: ${error.message}`);
       return;
@@ -132,6 +144,20 @@ async function deleteAll(table: string, pkColumn = "ID"): Promise<void> {
 
 // Quoted columns keep their case; unquoted columns fold to lowercase.
 const REMAP: Record<string, Record<string, string>> = {
+  tbljenislabel: {
+    ID: "ID",
+    deskripsiLabel: "deskripsilabel",
+    namaFail: "namafail",
+  },
+  tbljenisworksheet: {
+    ID: "ID",
+    deskripsiWorksheet: "deskripsiworksheet",
+    namaFail: "namafail",
+  },
+  tblkategoriubat: { ID: "ID" },
+  tblunitsku: { ID: "ID" },
+  tblunitpku: { ID: "ID" },
+  tblcolorschemes: { ID: "ID" },
   tblsenaraiubat: {
     ID: "ID",
     deskripsiPrabungkus: "deskripsiprabungkus",
@@ -144,6 +170,8 @@ const REMAP: Record<string, Record<string, string>> = {
     nomborMAL: "nombormal",
     arahanTambahan: "arahantambahan",
     jangkaHayat: "jangkahayat",
+    jenisLabel: "jenislabel",
+    jenisWorksheet: "jenisworksheet",
   },
   tblsenaraiprabungkus: {
     ID: "ID",
@@ -187,17 +215,17 @@ const REMAP: Record<string, Record<string, string>> = {
 async function main() {
   // 1. Clear existing data (FK-safe order: children before parents).
   console.log("=== Clearing existing Supabase data ===");
-  await deleteAll("tblsenaraiprabungkus");
-  await deleteAll("tblsenaraiubat");
-  await deleteAll("tbljenisworksheet");
-  await deleteAll("tbljenislabel");
-  await deleteAll("tblkategoriubat");
-  await deleteAll("tblunitsku");
-  await deleteAll("tblunitpku");
-  await deleteAll("tblsystemsettings", "settingkey");
-  await deleteAll("tblcolorschemes");
-  await deleteAll("uds.tblrekodlabel");
-  await deleteAll("uds.tblnamaubat");
+  await deleteAll(admin, "tblsenaraiprabungkus");
+  await deleteAll(admin, "tblsenaraiubat");
+  await deleteAll(admin, "tbljenisworksheet");
+  await deleteAll(admin, "tbljenislabel");
+  await deleteAll(admin, "tblkategoriubat");
+  await deleteAll(admin, "tblunitsku");
+  await deleteAll(admin, "tblunitpku");
+  await deleteAll(admin, "tblsystemsettings", "settingkey");
+  await deleteAll(admin, "tblcolorschemes");
+  await deleteAll(udsAdmin, "tblrekodlabel");
+  await deleteAll(udsAdmin, "tblnamaubat");
 
   // Clear Storage cache bucket objects (best-effort).
   try {
@@ -207,7 +235,7 @@ async function main() {
       console.log("  [uds-labels] cleared cached PDFs");
     }
   } catch {
-    console.log("  [uds-labels] bucket absent â€” nothing to clear");
+    console.log("  [uds-labels] bucket absent — nothing to clear");
   }
 
   if (!existsSync(PREPACK_DB) || !existsSync(UDS_DB)) {
@@ -218,15 +246,15 @@ async function main() {
   const prepackDb = await openSqlite(PREPACK_DB);
   const udsDb = await openSqlite(UDS_DB);
 
-  // 2. Lookup tables (no date filter) â€” migrate all rows.
+  // 2. Lookup tables (no date filter) — migrate all rows.
   console.log("\n=== Migrating lookup tables (all rows) ===");
-  await insertRows("tbljenislabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"));
-  await insertRows("tbljenisworksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"));
-  await insertRows("tblkategoriubat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"));
-  await insertRows("tblunitsku", readAll(prepackDb, "SELECT * FROM tblUnitSKU"));
-  await insertRows("tblunitpku", readAll(prepackDb, "SELECT * FROM tblUnitPKU"));
+  await insertRows(admin, "tbljenislabel", readAll(prepackDb, "SELECT * FROM tblJenisLabel"), REMAP.tbljenislabel);
+  await insertRows(admin, "tbljenisworksheet", readAll(prepackDb, "SELECT * FROM tblJenisWorksheet"), REMAP.tbljenisworksheet);
+  await insertRows(admin, "tblkategoriubat", readAll(prepackDb, "SELECT * FROM tblKategoriUbat"), REMAP.tblkategoriubat);
+  await insertRows(admin, "tblunitsku", readAll(prepackDb, "SELECT * FROM tblUnitSKU"), REMAP.tblunitsku);
+  await insertRows(admin, "tblunitpku", readAll(prepackDb, "SELECT * FROM tblUnitPKU"), REMAP.tblunitpku);
 
-  // 3. tblSenaraiUbat â€” only meds referenced by 2026 records.
+  // 3. tblSenaraiUbat — only meds referenced by 2026 records.
   console.log("\n=== Migrating medications referenced by 2026 records ===");
   const ubatIds = readAll(
     prepackDb,
@@ -235,15 +263,15 @@ async function main() {
   ).map((r) => r.id as number);
   await insertReferencedMeds(prepackDb, ubatIds);
 
-  // 4. tblSenaraiPrabungkus â€” 2026 records only.
+  // 4. tblSenaraiPrabungkus — 2026 records only.
   console.log("\n=== Migrating 2026 prepack records ===");
   const prabungkusRows = readAll(
     prepackDb,
     `SELECT * FROM tblSenaraiPrabungkus WHERE substr(tarikh,1,4)='${TARGET_YEAR}'`,
   );
-  await insertRows("tblsenaraiprabungkus", prabungkusRows, REMAP.tblsenaraiprabungkus);
+  await insertRows(admin, "tblsenaraiprabungkus", prabungkusRows, REMAP.tblsenaraiprabungkus);
 
-  // 5. uds.tblNamaUbat â€” only meds referenced by 2026 labels.
+  // 5. uds.tblNamaUbat — only meds referenced by 2026 labels.
   console.log("\n=== Migrating UDS meds referenced by 2026 labels ===");
   const namaUbatIds = readAll(
     udsDb,
@@ -252,16 +280,16 @@ async function main() {
   ).map((r) => r.id as number);
   await insertReferencedUdsMeds(udsDb, namaUbatIds);
 
-  // 6. uds.tblRekodLabel â€” 2026 records only.
+  // 6. uds.tblRekodLabel — 2026 records only.
   console.log("\n=== Migrating 2026 UDS labels ===");
   const rekodRows = readAll(
     udsDb,
     `SELECT "ID","Tarikh","Rujukan","NamaUbat","Kekuatan","Kelompok","Luput","Kuantiti","Penyedia","LuputNormalized","NamaUbatID"
      FROM tblRekodLabel WHERE substr("Tarikh",1,4)='${TARGET_YEAR}'`,
   );
-  await insertRows("uds.tblrekodlabel", rekodRows, REMAP["uds.tblrekodlabel"]);
+  await insertRows(udsAdmin, "tblrekodlabel", rekodRows, REMAP["uds.tblrekodlabel"]);
 
-  // 7. tblSystemSettings â€” year-scoped running numbers + defaults.
+  // 7. tblSystemSettings — year-scoped running numbers + defaults.
   console.log("\n=== Setting year-scoped running numbers ===");
   const maxPrepack = Math.max(
     ...prabungkusRows.map((r) => {
@@ -317,7 +345,7 @@ async function insertReferencedMeds(
     if (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
     stmt.free();
   }
-  await insertRows("tblsenaraiubat", rows, REMAP.tblsenaraiubat);
+  await insertRows(admin, "tblsenaraiubat", rows, REMAP.tblsenaraiubat);
 }
 
 async function insertReferencedUdsMeds(
@@ -335,10 +363,11 @@ async function insertReferencedUdsMeds(
     if (stmt.step()) rows.push(stmt.getAsObject() as Record<string, unknown>);
     stmt.free();
   }
-  await insertRows("uds.tblnamaubat", rows, REMAP["uds.tblnamaubat"]);
+  await insertRows(udsAdmin, "tblnamaubat", rows, REMAP["uds.tblnamaubat"]);
 }
 
 main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
