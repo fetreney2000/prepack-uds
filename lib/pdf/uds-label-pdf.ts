@@ -221,6 +221,10 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
 const MIN_FONT = 4.5;
 const MAX_FONT = 5.5;
 
+// Extra downward shift (pt) for the text block so the top cell margin
+// is a little larger than the bottom.
+const TOP_MARGIN_BIAS = 1.0;
+
 function drawCell(
   doc: PDFKit.PDFDocument,
   x: number,
@@ -240,7 +244,9 @@ function drawCell(
   const textW = w - CELL_PADDING_LEFT_PT - CELL_PADDING_RIGHT_PT;
   const lineHeight = fontSize + LINE_GAP;
   const totalTextH = lines.length * lineHeight;
-  const startY = y + (h - totalTextH) / 2;
+  // Vertically center, then push the block down a little so the top
+  // cell margin is slightly larger than the bottom.
+  const startY = y + (h - totalTextH) / 2 + TOP_MARGIN_BIAS;
 
   lines.forEach((line, i) => {
     // pdfkit's doc.text uses y as the TOP of the text, so no baseline
