@@ -21,7 +21,7 @@ interface ColorSchemeState {
   activeSchemeId: string;
   cssVars: Record<string, string>;
   hydrating: boolean;
-  setActiveScheme: (id: string, vars: Record<string, string>) => void;
+  setActiveScheme: (id: string, vars: Record<string, string>, isDark?: boolean) => void;
   applyScheme: (vars: Record<string, string>) => void;
   applyDark: (vars?: Record<string, string>) => void;
   hydrateFromCache: () => void;
@@ -55,12 +55,16 @@ export const useColorSchemeStore = create<ColorSchemeState>((set) => ({
   cssVars: {},
   hydrating: true,
 
-  setActiveScheme: (id, vars) => {
+  setActiveScheme: (id, vars, isDark = false) => {
     if (typeof window !== "undefined") {
       localStorage.setItem(COLOR_SCHEME_KEY, id);
       localStorage.setItem(COLOR_VARS_KEY, JSON.stringify(vars));
     }
-    applyToRoot(vars);
+    // Only apply the (light) scheme vars when NOT in dark mode — inline
+    // styles would otherwise override the `.dark` class.
+    if (!isDark) {
+      applyToRoot(vars);
+    }
     set({ activeSchemeId: id, cssVars: vars });
   },
 
