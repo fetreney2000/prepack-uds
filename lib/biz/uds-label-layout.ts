@@ -13,8 +13,8 @@
 //             every line fits fully; otherwise it is rejected.
 // Selection : auto solver picks the LARGEST grid that fits (most cells
 //             per label); no font is preferred — within the winning grid
-//             it chooses the font+size with the largest font size [4.8,
-//             5.0] (5.0 → 4.8), default 5.0.
+//             it chooses the font+size with the largest font size [4.5,
+//             5.5] (5.5 → 4.5), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -23,21 +23,21 @@ export const PAGE_WIDTH_PT = 3.5 * 72;      // 252 pt
 export const PAGE_HEIGHT_PT = 2.3 * 72;     // 165.6 pt
 export const MARGIN_CM = 0.2;
 export const MARGIN_PT = MARGIN_CM * 28.3465; // ~5.67 pt per side
-export const CELL_PADDING_LEFT_PT = 1.5;
-export const CELL_PADDING_RIGHT_PT = 1.0;
-export const CELL_PADDING_VERTICAL_PT = 1.0;
-export const LINE_GAP = -0.2;
+export const CELL_PADDING_LEFT_PT = 2.0;
+export const CELL_PADDING_RIGHT_PT = 2.0;
+export const CELL_PADDING_VERTICAL_PT = 2.0;
+export const LINE_GAP = 0.8;
 
 export const MIN_COLS = 4;
 export const MAX_COLS = 8;
 export const MIN_ROWS = 4;
 export const MAX_ROWS = 7;
 
-export const MIN_FONT_SIZE = 4.0;
-export const MAX_FONT_SIZE = 6.0;
+export const MIN_FONT_SIZE = 4.5;
+export const MAX_FONT_SIZE = 5.5;
 export const DEFAULT_FONT_SIZE = 5.0;
-export const AUTO_MAX_FONT_SIZE = 5.0; // auto mode starts at 5.0 …
-export const AUTO_MIN_FONT_SIZE = 4.8; // … and reduces only to 4.8
+export const AUTO_MAX_FONT_SIZE = 5.5; // auto mode starts at 5.5 …
+export const AUTO_MIN_FONT_SIZE = 4.5; // … and reduces only to 4.5
 export const FONT_STEP = 0.1;
 
 export const BORDER_LINE_WIDTH = 0.3;
@@ -157,7 +157,6 @@ export function fitCell(
   fontName: string,
   fontSize: number,
   measurer: TextMeasurer,
-  _mode: UdsMode,
 ): { lines: string[] } | null {
   const w = geo.textWidthPt;
 
@@ -277,7 +276,7 @@ export function findBestLayout(
     const font = options.font || fonts[0] || 'Helvetica';
     const fontSize = clampNum(options.fontSize ?? DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE);
     const geo = computeCellGeometry(cols, rows);
-    const fitted = fitCell(cell, geo, font, fontSize, measurer, mode);
+    const fitted = fitCell(cell, geo, font, fontSize, measurer);
     if (!fitted) return null;
     return {
       font,
@@ -309,7 +308,7 @@ export function findBestLayout(
     for (const font of candidates) {
       for (let size = AUTO_MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
-        const fitted = fitCell(cell, geo, font, fs, measurer, mode);
+        const fitted = fitCell(cell, geo, font, fs, measurer);
         if (fitted) {
           if (!bestFit || fs > bestFit.fontSize) {
             bestFit = {

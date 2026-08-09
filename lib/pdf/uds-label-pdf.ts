@@ -6,10 +6,9 @@
 // public/fonts (excluding lucide) exactly as the original §4.7.
 //
 // Layout constants:
-//   Page 3.5" x 2.3"; margins 0.2cm; double thin borders (0.3pt
-//   line, inner offset 0.6pt); per-cell padding; bold simulated by
-//   drawing text twice at a 0.2pt x-offset; text vertically centered.
-//   compress:false, pdfVersion:'1.7'.
+//   Page 3.5" x 2.3"; margins 0.2cm; single-line borders; per-cell
+//   padding; text center-aligned; real font metrics used for fitting.
+//   No bold simulation. compress:false, pdfVersion:'1.7'.
 // ============================================================
 
 import PDFDocument from "pdfkit";
@@ -98,10 +97,8 @@ async function loadFonts(): Promise<LoadedFont[]> {
   return fonts;
 }
 
-// A measurable font name is the base font name or a bold variant.
-// pdfkit registers the font under its base name; we use the base name
-// for fitting (measuring) and register both normal + bold faces.
-const BOLD_SUFFIX = "-bold";
+// A measurable font name is the base font name. Fonts are registered
+// under their base name for measurement + drawing.
 
 /**
  * Render a UDS label PDF. Returns a Promise resolving to the pdfkit
@@ -124,9 +121,32 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     input.luput,
   );
 
+  // Create the document up-front so we can measure with the REAL font
+  // metrics (pdfkit widthOfString) instead of an approximation.
+  const doc = new PDFDocument({
+    size: [252, 165.6],
+    margin: 0,
+    compress: false,
+    pdfVersion: "1.7",
+    autoFirstPage: true,
+  });
+
+  // Register every loaded font under its base name (for measurement
+  // and drawing).
+  for (const f of loaded) {
+    doc.registerFont(f.name, f.data);
+  }
+
   const measurer: TextMeasurer = {
     widthOfString(text, fontName, fontSize) {
-      return widthOf(text, fontName, fontSize);
+      try {
+        doc.font(fontName);
+        doc.fontSize(fontSize);
+        return doc.widthOfString(text);
+      } catch {
+        // Fall back to an approximation if the font isn't registered.
+        return widthOf(text, fontName, fontSize);
+      }
     },
   };
 
@@ -157,38 +177,19 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     fitted = [combined, cell.kelompok, cell.luput].filter((l) => l.length > 0);
   }
 
-  const doc = new PDFDocument({
-    size: [252, 165.6],
-    margin: 0,
-    compress: false,
-    pdfVersion: "1.7",
-    autoFirstPage: true,
-  });
-
   const chunks: Buffer[] = [];
   doc.on("data", (c) => chunks.push(c));
 
-  // Register fonts (normal + bold face for simulated-bold drawing).
-  const useStandard = fontMap.size === 0;
-  if (useStandard) {
-    doc.font("Helvetica");
-  } else {
-    const base = font.replace(BOLD_SUFFIX, "");
-    const data = fontMap.get(base) ?? fontMap.values().next().value;
-    if (data) {
-      doc.registerFont("label-font", data);
-      doc.font("label-font");
-    } else {
-      doc.font("Helvetica");
-    }
-  }
+  // Select the drawing font (base name). Standard-fallback if absent.
+  const drawFont = fontMap.has(font) ? font : "Helvetica";
+  doc.font(drawFont);
 
   const geo = computeCellGeometry(cols, rows);
   const { width: availW } = availableSizePt();
   const marginPt = (252 - availW) / 2;
 
-  // Font size for drawing (clamped as pdfkit handles TTF sizes in pt).
-  const drawFontSize = Math.min(Math.max(fontSize, 4), 6);
+  // Font size for drawing (clamped to the label range).
+  const drawFontSize = Math.min(Math.max(fontSize, MIN_FONT), MAX_FONT);
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -216,6 +217,9 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     doc.on("error", reject);
   });
 }
+
+const MIN_FONT = 4.5;
+const MAX_FONT = 5.5;
 
 function drawCell(
   doc: PDFKit.PDFDocument,
@@ -247,8 +251,8 @@ function drawCell(
   });
 }
 
-// Bold simulation: draw text twice at a 0.2pt x-offset. Text is
-// center-aligned within the cell's text box.
+// Draw a single line of text, center-aligned within the cell's text box.
+// No bold simulation — text is drawn once for a clean, sharp glyph.
 function drawLine(
   doc: PDFKit.PDFDocument,
   text: string,
@@ -257,15 +261,13 @@ function drawLine(
   maxW: number,
 ): void {
   const display = nbSpacify(text);
-  const opts: PDFKit.Mixins.TextOptions = {
+  doc.text(display, x, y, {
     width: maxW,
     lineBreak: false,
     ellipsis: false,
     height: 1,
     align: "center",
-  };
-  doc.text(display, x, y, opts);
-  doc.text(display, x + 0.2, y, opts);
+  });
 }
 
 // Approximate glyph-width fitting metric (Helvetica metric, scaled).
