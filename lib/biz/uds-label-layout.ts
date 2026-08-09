@@ -13,8 +13,8 @@
 //             every line fits fully; otherwise it is rejected.
 // Selection : auto solver picks the LARGEST grid that fits (most cells
 //             per label); no font is preferred — within the winning grid
-//             it chooses the font+size with the largest font size [5.0,
-//             5.5] (5.5 → 5.0), default 5.0.
+//             it chooses the font+size with the largest font size [4.6,
+//             5.2] (5.2 → 4.6), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -33,11 +33,11 @@ export const MAX_COLS = 8;
 export const MIN_ROWS = 4;
 export const MAX_ROWS = 7;
 
-export const MIN_FONT_SIZE = 5.0;
-export const MAX_FONT_SIZE = 5.5;
+export const MIN_FONT_SIZE = 4.6;
+export const MAX_FONT_SIZE = 5.2;
 export const DEFAULT_FONT_SIZE = 5.0;
-export const AUTO_MAX_FONT_SIZE = 5.5; // auto mode starts at 5.5 …
-export const AUTO_MIN_FONT_SIZE = 5.0; // … and reduces only to 5.0
+export const AUTO_MAX_FONT_SIZE = 5.2; // auto mode starts at 5.2 …
+export const AUTO_MIN_FONT_SIZE = 4.6; // … and reduces only to 4.6
 export const FONT_STEP = 0.1;
 
 export const BORDER_LINE_WIDTH = 0.3;

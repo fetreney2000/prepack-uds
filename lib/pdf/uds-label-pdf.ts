@@ -218,8 +218,8 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   });
 }
 
-const MIN_FONT = 5.0;
-const MAX_FONT = 5.5;
+const MIN_FONT = 4.6;
+const MAX_FONT = 5.2;
 
 // Extra downward shift (pt) for the text block so the top cell margin
 // is a little larger than the bottom.
