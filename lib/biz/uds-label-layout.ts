@@ -3,7 +3,7 @@
 // Ported from analysis §4.7 (must be byte-for-byte faithful).
 //
 // Page      : 3.5" x 2.3" (252pt x 165.6pt); margins 0.2cm all sides
-// Grid      : cols ∈ [4..9], rows ∈ [4..9] (min 4×4, max 9×9)
+// Grid      : cols ∈ [5..9], rows ∈ [5..9] (min 5×5, max 9×9)
 // Cell      : 4 to 6 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
 // Lines     : Nama+Kekuatan (1..3 lines, combined), Kelompok, Luput.
 //             Nama may wrap onto the top, second and third top line to
@@ -28,9 +28,9 @@ export const CELL_PADDING_RIGHT_PT = 2.0;
 export const CELL_PADDING_VERTICAL_PT = 2.0;
 export const LINE_GAP = 0.8;
 
-export const MIN_COLS = 4;
+export const MIN_COLS = 5;
 export const MAX_COLS = 9;
-export const MIN_ROWS = 4;
+export const MIN_ROWS = 5;
 export const MAX_ROWS = 9;
 
 export const MIN_FONT_SIZE = 4.6;
@@ -252,7 +252,7 @@ export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
  * Find the best label layout for a cell's content.
  *
  * auto (solver):
- *   - tries grids (cols 4..9, rows 4..9) largest-first (most cells)
+ *   - tries grids (cols 5..9, rows 5..9) largest-first (most cells)
  *   - no font is preferred — for each grid picks the font+size with the
  *     largest font size (5.0 → 4.8) that fits ALL text fully
  *   - returns the FIRST grid that fits (no truncation, no overflow) →
