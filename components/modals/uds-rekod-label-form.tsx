@@ -50,15 +50,6 @@ const EMPTY = {
   Penyedia: "",
 };
 
-// UDS ubat as combobox items (value = Nama, label = Nama + Kekuatan).
-function toItems(list: UdsUbat[]) {
-  return list.map((m) => ({
-    value: m.Nama,
-    label: m.Kekuatan ? `${m.Nama} · ${m.Kekuatan}` : m.Nama,
-    med: m,
-  }));
-}
-
 export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const { data: ubatList } = useUdsUbatList();
@@ -68,7 +59,7 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
-  const items = useMemo(() => toItems(ubatList ?? []), [ubatList]);
+  const items = ubatList ?? [];
 
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -101,13 +92,13 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
 
   const handleLuputSelect = (date?: Date) => {
     if (!date) return;
-    // Store in the accepted expiry grammar: MM/YYYY.
-    setForm((f) => ({ ...f, Luput: format(date, "MM/yyyy") }));
+    // Store in the accepted expiry grammar: DD/MM/YY.
+    setForm((f) => ({ ...f, Luput: format(date, "dd/MM/yy") }));
   };
 
   const selectedLuput = useMemo(() => {
-    if (!/^\d{1,2}\/\d{4}$/.test(form.Luput)) return undefined;
-    const d = parse(form.Luput, "MM/yyyy", new Date());
+    if (!/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(form.Luput)) return undefined;
+    const d = parse(form.Luput, "dd/MM/yy", new Date());
     return isNaN(d.getTime()) ? undefined : d;
   }, [form.Luput]);
 
@@ -170,15 +161,15 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
           <div className="space-y-1.5">
             <Label>Nama Ubat</Label>
             <Combobox
-              value={form.NamaUbat || null}
-              onValueChange={(v) => {
-                const name = typeof v === "string" ? v : null;
-                const med = items.find((i) => i.value === name)?.med;
-                setUbo(med ?? null);
+              items={items}
+              itemToStringValue={(m) => m.Nama}
+              value={ubo}
+              onValueChange={(m) => {
+                setUbo(m);
                 setForm((f) => ({
                   ...f,
-                  NamaUbat: name ?? "",
-                  Kekuatan: med?.Kekuatan ?? f.Kekuatan,
+                  NamaUbat: m?.Nama ?? "",
+                  Kekuatan: m?.Kekuatan ?? f.Kekuatan,
                 }));
               }}
             >
@@ -186,11 +177,14 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
               <ComboboxContent>
                 <ComboboxEmpty>Tiada ubat dijumpai.</ComboboxEmpty>
                 <ComboboxList>
-                  {items.map((item) => (
-                    <ComboboxItem key={item.value} value={item.value}>
-                      {item.label}
+                  {(m) => (
+                    <ComboboxItem key={m.ID} value={m}>
+                      {m.Nama}
+                      {m.Kekuatan && (
+                        <span className="ml-2 text-xs text-muted-foreground">{m.Kekuatan}</span>
+                      )}
                     </ComboboxItem>
-                  ))}
+                  )}
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
