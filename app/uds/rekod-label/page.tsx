@@ -195,7 +195,11 @@ export default function UdsRekodLabelPage() {
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteBusy} className="bg-destructive text-destructive-foreground hover:bg-destructive/80">
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteBusy}
+              variant="destructive"
+            >
               {deleteBusy ? "Memadam..." : "Padam"}
             </AlertDialogAction>
           </AlertDialogFooter>
