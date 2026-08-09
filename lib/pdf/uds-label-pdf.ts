@@ -219,11 +219,11 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   });
 }
 
-const MAX_FONT = 5.2;
+const MAX_FONT = 5.5;
 
 // Renderer clamp allows the solver's long-word font floor (below the
 // normal 4.6 range) so an oversized word isn't bumped back up and
-// overflowed.
+// overflowed. The ceiling matches the manual-mode max (5.5pt).
 const DRAW_MIN_FONT = HARD_MIN_FONT_SIZE;
 const DRAW_MAX_FONT = MAX_FONT;
 

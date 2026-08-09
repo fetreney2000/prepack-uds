@@ -33,6 +33,15 @@ export const MAX_COLS = 9;
 export const MIN_ROWS = 5;
 export const MAX_ROWS = 9;
 
+// Manual-mode ranges (user-selectable). Wider than the auto solver so the
+// user can tune font size and grid as needed.
+export const MANUAL_MIN_COLS = 4;
+export const MANUAL_MAX_COLS = 8;
+export const MANUAL_MIN_ROWS = 4;
+export const MANUAL_MAX_ROWS = 8;
+export const MANUAL_MIN_FONT_SIZE = 3.5;
+export const MANUAL_MAX_FONT_SIZE = 5.5;
+
 export const MIN_FONT_SIZE = 4.6;
 export const MAX_FONT_SIZE = 5.2;
 export const DEFAULT_FONT_SIZE = 5.0;
@@ -43,6 +52,15 @@ export const FONT_STEP = 0.1;
 
 export const BORDER_LINE_WIDTH = 0.3;
 export const INNER_BORDER_OFFSET_PT = 0.6;
+
+// Fonts available to the manual selector (must match .ttf files in
+// public/fonts). Auto mode still solves across ALL loaded fonts.
+export const AVAILABLE_FONTS = [
+  "Bell Centennial",
+  "Inter",
+  "Inter-Medium",
+  "Roboto",
+] as const;
 
 // ---------- Types ----------
 
@@ -272,10 +290,10 @@ export function findBestLayout(
   const mode = options.mode === 'manual' ? 'manual' : 'auto';
 
   if (mode === 'manual') {
-    const cols = clampInt(options.cols ?? MIN_COLS, MIN_COLS, MAX_COLS);
-    const rows = clampInt(options.rows ?? MIN_ROWS, MIN_ROWS, MAX_ROWS);
+    const cols = clampInt(options.cols ?? MANUAL_MIN_COLS, MANUAL_MIN_COLS, MANUAL_MAX_COLS);
+    const rows = clampInt(options.rows ?? MANUAL_MIN_ROWS, MANUAL_MIN_ROWS, MANUAL_MAX_ROWS);
     const font = options.font || fonts[0] || 'Helvetica';
-    const fontSize = clampNum(options.fontSize ?? DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE);
+    const fontSize = clampNum(options.fontSize ?? DEFAULT_FONT_SIZE, MANUAL_MIN_FONT_SIZE, MANUAL_MAX_FONT_SIZE);
     const geo = computeCellGeometry(cols, rows);
     const fitted = fitCell(cell, geo, font, fontSize, measurer);
     if (!fitted) return null;
