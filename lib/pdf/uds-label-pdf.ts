@@ -25,6 +25,7 @@ import {
   CELL_PADDING_LEFT_PT,
   CELL_PADDING_RIGHT_PT,
   LINE_GAP,
+  HARD_MIN_FONT_SIZE,
   type TextMeasurer,
   type UdsMode,
 } from "@/lib/biz/uds-label-layout";
@@ -189,7 +190,7 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   const marginPt = (252 - availW) / 2;
 
   // Font size for drawing (clamped to the label range).
-  const drawFontSize = Math.min(Math.max(fontSize, MIN_FONT), MAX_FONT);
+  const drawFontSize = Math.min(Math.max(fontSize, DRAW_MIN_FONT), DRAW_MAX_FONT);
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -218,8 +219,13 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   });
 }
 
-const MIN_FONT = 4.6;
 const MAX_FONT = 5.2;
+
+// Renderer clamp allows the solver's long-word font floor (below the
+// normal 4.6 range) so an oversized word isn't bumped back up and
+// overflowed.
+const DRAW_MIN_FONT = HARD_MIN_FONT_SIZE;
+const DRAW_MAX_FONT = MAX_FONT;
 
 // Extra downward shift (pt) for the text block so the top cell margin
 // is a little larger than the bottom.

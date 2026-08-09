@@ -37,7 +37,8 @@ export const MIN_FONT_SIZE = 4.6;
 export const MAX_FONT_SIZE = 5.2;
 export const DEFAULT_FONT_SIZE = 5.0;
 export const AUTO_MAX_FONT_SIZE = 5.2; // auto mode starts at 5.2 …
-export const AUTO_MIN_FONT_SIZE = 4.6; // … and reduces only to 4.6
+export const AUTO_MIN_FONT_SIZE = 4.6; // … normal range reduces to 4.6
+export const HARD_MIN_FONT_SIZE = 3.5; // floor reached only for long words
 export const FONT_STEP = 0.1;
 
 export const BORDER_LINE_WIDTH = 0.3;
@@ -306,7 +307,7 @@ export function findBestLayout(
     const geo = computeCellGeometry(g.cols, g.rows);
     let bestFit: UdsLabelCandidate | null = null;
     for (const font of candidates) {
-      for (let size = AUTO_MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
+      for (let size = AUTO_MAX_FONT_SIZE; size >= HARD_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
         const fitted = fitCell(cell, geo, font, fs, measurer);
         if (fitted) {
