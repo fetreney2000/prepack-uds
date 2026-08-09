@@ -34,8 +34,8 @@ import {
 const FONT_DIR = join(process.cwd(), "public", "fonts");
 
 // Auto-mode fonts, in order of preference. The user wants labels in
-// Bell Centennial, falling back to Roboto.
-const PREFERRED_FONTS = ["Bell Centennial", "Roboto"];
+// Bell Centennial, falling back to Roboto, then Inter.
+const PREFERRED_FONTS = ["Bell Centennial", "Roboto", "Inter"];
 
 export interface UdsPdfInput {
   nama: string;
