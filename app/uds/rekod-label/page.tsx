@@ -1,7 +1,7 @@
 // UDS Rekod Label — searchable/sortable/paginated list (read-only, Phase 1)
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageShell } from "@/components/page-shell";
@@ -10,10 +10,12 @@ import { useUdsRekodLabelList, type UdsRekodLabel } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { UdsRekodLabelForm } from "@/components/modals/uds-rekod-label-form";
+import { Plus, Printer } from "lucide-react";
 
 export default function UdsRekodLabelPage() {
   const { data, isLoading, isError, error } = useUdsRekodLabelList();
+  const [formOpen, setFormOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<UdsRekodLabel>[]>(
     () => [
@@ -78,6 +80,10 @@ export default function UdsRekodLabelPage() {
     <PageShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Rekod Label UDS</h1>
+        <Button onClick={() => setFormOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Tambah Rekod
+        </Button>
       </div>
 
       {isError && (
@@ -98,6 +104,8 @@ export default function UdsRekodLabelPage() {
           searchPlaceholder="Cari rujukan, nama ubat, atau penyedia..."
         />
       )}
+
+      <UdsRekodLabelForm open={formOpen} onOpenChange={setFormOpen} />
     </PageShell>
   );
 }
