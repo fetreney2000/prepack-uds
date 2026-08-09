@@ -168,13 +168,34 @@ export default function UdsRekodLabelPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Padam Rekod?</AlertDialogTitle>
             <AlertDialogDescription>
-              Padam rekod {deleting?.Rujukan} — {deleting?.NamaUbat}? Tindakan ini
-              tidak boleh dibatalkan.
+              Anda pasti mahu memadam rekod ini? Tindakan ini tidak boleh dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {deleting && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-md border bg-muted/40 p-3 text-sm">
+              <dt className="text-muted-foreground">Rujukan</dt>
+              <dd className="font-medium">{deleting.Rujukan}</dd>
+              <dt className="text-muted-foreground">Tarikh</dt>
+              <dd>{formatDate(deleting.Tarikh)}</dd>
+              <dt className="text-muted-foreground">Nama Ubat</dt>
+              <dd>{deleting.NamaUbat}</dd>
+              <dt className="text-muted-foreground">Kekuatan</dt>
+              <dd>{deleting.Kekuatan ?? "—"}</dd>
+              <dt className="text-muted-foreground">Kelompok</dt>
+              <dd>{deleting.Kelompok ?? "—"}</dd>
+              <dt className="text-muted-foreground">Luput</dt>
+              <dd>{deleting.Luput ?? "—"}</dd>
+              <dt className="text-muted-foreground">Kuantiti</dt>
+              <dd>{deleting.Kuantiti}</dd>
+              <dt className="text-muted-foreground">Penyedia</dt>
+              <dd>{deleting.Penyedia ?? "—"}</dd>
+            </dl>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={deleteBusy}>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteBusy} className="bg-destructive text-destructive-foreground hover:bg-destructive/80">
               {deleteBusy ? "Memadam..." : "Padam"}
             </AlertDialogAction>
           </AlertDialogFooter>

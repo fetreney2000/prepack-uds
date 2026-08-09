@@ -79,7 +79,15 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
           Kuantiti: String(editing.Kuantiti),
           Penyedia: editing.Penyedia,
         });
-        setUbo(null);
+        // Pre-fill the combobox with the matching medication (by ID, else name).
+        const matched =
+          (editing.NamaUbatID != null
+            ? items.find((m) => m.ID === editing.NamaUbatID)
+            : undefined) ??
+          (editing.NamaUbat
+            ? items.find((m) => m.Nama.toUpperCase() === editing.NamaUbat.toUpperCase())
+            : undefined);
+        setUbo(matched ?? null);
         setPreview(editing.Rujukan);
       } else {
         setForm(EMPTY);
@@ -87,7 +95,7 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
         setPreview(null);
       }
     }
-  }, [open, editing]);
+  }, [open, editing, items]);
 
   // Live Rujukan preview from the chosen Tarikh (no reserve).
   useEffect(() => {
