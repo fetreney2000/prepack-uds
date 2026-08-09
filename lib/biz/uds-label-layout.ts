@@ -4,10 +4,11 @@
 //
 // Page      : 3.5" x 2.3" (252pt x 165.6pt); margins 0.2cm all sides
 // Grid      : cols ∈ [4..8], rows ∈ [4..7] (min 4×4, max 8×7)
-// Cell      : 4 or 5 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
-// Lines     : Nama (1 or 2 lines), Kekuatan, Kelompok, Luput. Nama may
-//             wrap onto the top + second-top lines to avoid truncation.
-//             Kelompok/Luput NEVER wrap (NBSP).
+// Cell      : 4 to 6 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
+// Lines     : Nama+Kekuatan (1..3 lines, combined), Kelompok, Luput.
+//             Nama may wrap onto the top, second and third top line to
+//             avoid truncation; Kekuatan is combined with Nama to save
+//             space. Kelompok/Luput NEVER wrap (NBSP).
 // Fitting   : text is NEVER truncated — a grid/size only qualifies if
 //             every line fits fully; otherwise it is rejected.
 // Selection : auto solver picks the LARGEST grid that fits (most cells
@@ -51,7 +52,7 @@ export interface TextMeasurer {
 
 export interface CellText {
   nama: string;       // canonical Nama (uppercased)
-  kekuatan: string;   // Kekuatan (uppercased) or ''
+  kekuatan: string;   // Kekuatan (uppercased) or '' — combined with Nama
   kelompok: string;   // Kelompok (uppercased, NBSP)
   luput: string;      // Luput (uppercased, NBSP)
 }
@@ -143,9 +144,10 @@ export function buildCellLines(
 /**
  * Compute the final lines for a cell at the given grid + size.
  *
- * Nama is permitted to occupy the top and second-top line (wrapped at a
- * word boundary) to avoid truncation, so a cell can have 4 or 5 lines:
- *   [namaL1, namaL2?, kekuatan, kelompok, luput]
+ * Nama is combined with Kekuatan and permitted to occupy the top,
+ * second and third top line (wrapped at word boundaries) to avoid
+ * truncation, so a cell can have 4 to 6 lines:
+ *   [namaKekuatanL1, namaKekuatanL2?, namaKekuatanL3?, kelompok, luput]
  * Text is NEVER truncated — a grid/size that cannot fit every line
  * fully (width AND height) is rejected (returns null).
  */
@@ -159,11 +161,12 @@ export function fitCell(
 ): { lines: string[] } | null {
   const w = geo.textWidthPt;
 
-  // Wrap nama into up to 2 lines to avoid truncation.
-  const namaLines = wrapNama(cell.nama, w, measurer, fontName, fontSize);
-  if (!namaLines) return null;
+  // Combine Nama + Kekuatan, then wrap into up to 3 lines.
+  const combined = [cell.nama, cell.kekuatan].filter((s) => s.length > 0).join(' ');
+  const namaBlock = wrapNama(combined, w, measurer, fontName, fontSize);
+  if (!namaBlock) return null;
 
-  const lines = [...namaLines, cell.kekuatan, cell.kelompok, cell.luput];
+  const lines = [...namaBlock, cell.kelompok, cell.luput];
 
   // Width: every line must fit fully.
   for (const line of lines) {
@@ -182,36 +185,46 @@ export function fitCell(
   return { lines };
 }
 
+/** Maximum lines the Nama+Kekuatan block may occupy. */
+const NAMA_MAX_LINES = 3;
+
 /**
- * Wrap nama into 1 or 2 lines at word boundaries so it fits the width
- * without truncation. Returns null if it cannot fit even on two lines.
+ * Greedy word-wrap a string into up to NAMA_MAX_LINES (3) lines so it
+ * fits the width without truncation. Returns null if it cannot fit even
+ * across all allowed lines (e.g. a single word wider than the box).
  */
 function wrapNama(
-  nama: string,
+  text: string,
   w: number,
   measurer: TextMeasurer,
   fontName: string,
   fontSize: number,
 ): string[] | null {
-  if (nama.length === 0) return [''];
-  if (measurer.widthOfString(nama, fontName, fontSize) <= w) return [nama];
+  if (text.length === 0) return [''];
+  if (measurer.widthOfString(text, fontName, fontSize) <= w) return [text];
 
-  const words = nama.split(' ');
-  // Try to split at each word boundary; the first line must fit, and
-  // the remainder must fit on the second line.
-  for (let i = 1; i < words.length; i++) {
-    const first = words.slice(0, i).join(' ');
-    const rest = words.slice(i).join(' ');
-    if (first.length === 0 || rest.length === 0) continue;
-    if (
-      measurer.widthOfString(first, fontName, fontSize) <= w &&
-      measurer.widthOfString(rest, fontName, fontSize) <= w
-    ) {
-      return [first, rest];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (measurer.widthOfString(candidate, fontName, fontSize) <= w) {
+      current = candidate;
+    } else {
+      if (current) {
+        lines.push(current);
+        current = word;
+      } else {
+        // A single word is wider than the box — cannot fit.
+        return null;
+      }
+      if (lines.length >= NAMA_MAX_LINES) return null;
     }
   }
+  if (current) lines.push(current);
 
-  return null;
+  return lines.length <= NAMA_MAX_LINES ? lines : null;
 }
 
 function fitsLine(

@@ -149,11 +149,12 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   const cols = candidate?.cols ?? 4;
   const rows = candidate?.rows ?? 4;
 
-  // Final lines to render (4 or 5). If the solver found nothing, build
-  // a best-effort 4-line layout from the raw cell.
+  // Final lines to render (4-6). If the solver found nothing, build
+  // a best-effort layout from the raw cell (nama+kekuatan combined).
   let fitted: string[] = candidate?.lines ?? [];
   if (fitted.length === 0) {
-    fitted = [cell.nama, cell.kekuatan, cell.kelompok, cell.luput].filter((l) => l.length > 0);
+    const combined = [cell.nama, cell.kekuatan].filter(Boolean).join(" ");
+    fitted = [combined, cell.kelompok, cell.luput].filter((l) => l.length > 0);
   }
 
   const doc = new PDFDocument({
