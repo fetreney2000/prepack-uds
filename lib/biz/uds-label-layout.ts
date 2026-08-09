@@ -10,8 +10,9 @@
 // Fitting   : text is NEVER truncated — a grid/size only qualifies if
 //             every line fits fully; otherwise it is rejected.
 // Selection : auto solver picks the LARGEST grid that fits (most cells
-//             per label), preferring the font order then the largest
-//             size; font size range [4.8, 5.0] (5.0 → 4.8), default 5.0.
+//             per label); no font is preferred — within the winning grid
+//             it chooses the font+size with the largest font size [4.8,
+//             5.0] (5.0 → 4.8), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -190,10 +191,10 @@ export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
  *
  * auto (solver):
  *   - tries grids (cols 4..8, rows 4..7) largest-first (most cells)
- *   - within a grid, prefers the font order (Bell Centennial → Inter →
- *     Roboto) then the largest size (5.0 → 4.8)
- *   - returns the FIRST combination that fits ALL text fully (no
- *     truncation, no overflow) → the largest possible grid (most cells)
+ *   - no font is preferred — for each grid picks the font+size with the
+ *     largest font size (5.0 → 4.8) that fits ALL text fully
+ *   - returns the FIRST grid that fits (no truncation, no overflow) →
+ *     the largest possible grid (most cells per label)
  *
  * manual:
  *   - uses client-provided cols/rows/font/fontSize (clamped)
@@ -229,38 +230,42 @@ export function findBestLayout(
 
   // Auto: solve for the LARGEST grid that fits all text without
   // truncation or overflow (more cells per label). Grids are tried
-  // largest-first; within a grid we prefer the preferred font order,
-  // then the largest size.
+  // largest-first. No font is preferred — for each grid we pick the
+  // font+size that yields the largest font size (best readability).
   const gridList: { cols: number; rows: number }[] = [];
   for (const g of enumerateGrids()) gridList.push(g);
 
   // Largest grid first (most cells).
   gridList.sort((a, b) => b.cols * b.rows - a.cols * a.rows);
 
-  // fonts are provided in preference order (Bell Centennial → Inter →
-  // Roboto); do NOT re-sort so preference is respected.
-  const fontOrder = fonts.length > 0 ? fonts : ['Helvetica'];
+  const candidates = fonts.length > 0 ? fonts : ['Helvetica'];
 
   for (const g of gridList) {
     const geo = computeCellGeometry(g.cols, g.rows);
-    for (const font of fontOrder) {
+    let bestFit: UdsLabelCandidate | null = null;
+    for (const font of candidates) {
       for (let size = AUTO_MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
         const fitted = fitCell(cell, geo, font, fs, measurer, mode);
         if (fitted) {
-          return {
-            font,
-            fontSize: fs,
-            cols: g.cols,
-            rows: g.rows,
-            cellsCount: g.cols * g.rows,
-            mode,
-            lines: [fitted],
-            fits: true,
-          };
+          if (!bestFit || fs > bestFit.fontSize) {
+            bestFit = {
+              font,
+              fontSize: fs,
+              cols: g.cols,
+              rows: g.rows,
+              cellsCount: g.cols * g.rows,
+              mode,
+              lines: [fitted],
+              fits: true,
+            };
+          }
+          // Try the next font at its own largest fitting size.
+          break;
         }
       }
     }
+    if (bestFit) return bestFit;
   }
 
   return null;

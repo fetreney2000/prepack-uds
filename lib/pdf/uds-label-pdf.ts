@@ -32,9 +32,10 @@ import {
 
 const FONT_DIR = join(process.cwd(), "public", "fonts");
 
-// Auto-mode fonts, in order of preference. The user wants labels in
-// Bell Centennial, falling back to Inter, then Roboto.
-const PREFERRED_FONTS = ["Bell Centennial", "Inter", "Roboto"];
+// Candidate fonts for the solver. No font is preferred — the solver
+// picks whichever font yields the most cells (largest grid) and the
+// best fit.
+const CANDIDATE_FONTS = ["Bell Centennial", "Inter", "Roboto"];
 
 export interface UdsPdfInput {
   nama: string;
@@ -111,10 +112,10 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   const fontNames = loaded.map((f) => f.name);
   const fontMap = new Map(loaded.map((f) => [f.name, f.data]));
 
-  // Auto mode: restrict to the preferred fonts (Bell Centennial → Roboto),
-  // falling back to any loaded font if neither is available.
-  const preferred = PREFERRED_FONTS.filter((n) => fontNames.includes(n));
-  const autoFonts = preferred.length > 0 ? preferred : fontNames;
+  // Solver font candidates (no preference), falling back to any loaded
+  // font if none of the candidates are available.
+  const candidates = CANDIDATE_FONTS.filter((n) => fontNames.includes(n));
+  const autoFonts = candidates.length > 0 ? candidates : fontNames;
 
   const cell = buildCellLines(
     input.nama,
@@ -142,7 +143,7 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     measurer,
   );
 
-  // Fallback: if nothing fits, use the preferred font at a readable size.
+  // Fallback: if nothing fits, use a candidate font at a readable size.
   const font = candidate?.font ?? autoFonts[0] ?? fontNames[0] ?? "Helvetica";
   const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
   const cols = candidate?.cols ?? 4;
