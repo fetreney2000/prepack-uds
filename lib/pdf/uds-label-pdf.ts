@@ -234,7 +234,9 @@ function drawCell(
   const startY = y + (h - totalTextH) / 2;
 
   lines.forEach((line, i) => {
-    const ty = startY + i * lineHeight + fontSize; // baseline
+    // pdfkit's doc.text uses y as the TOP of the text, so no baseline
+    // offset here — otherwise the block is pushed down by fontSize.
+    const ty = startY + i * lineHeight;
     const tx = x + CELL_PADDING_LEFT_PT;
     drawLine(doc, line, tx, ty, textW);
   });
