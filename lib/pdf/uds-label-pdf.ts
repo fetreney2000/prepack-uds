@@ -33,6 +33,10 @@ import {
 
 const FONT_DIR = join(process.cwd(), "public", "fonts");
 
+// Auto-mode fonts, in order of preference. The user wants labels in
+// Bell Centennial, falling back to Roboto.
+const PREFERRED_FONTS = ["Bell Centennial", "Roboto"];
+
 export interface UdsPdfInput {
   nama: string;
   kekuatan: string | null;
@@ -108,6 +112,11 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   const fontNames = loaded.map((f) => f.name);
   const fontMap = new Map(loaded.map((f) => [f.name, f.data]));
 
+  // Auto mode: restrict to the preferred fonts (Bell Centennial → Roboto),
+  // falling back to any loaded font if neither is available.
+  const preferred = PREFERRED_FONTS.filter((n) => fontNames.includes(n));
+  const autoFonts = preferred.length > 0 ? preferred : fontNames;
+
   const cell = buildCellLines(
     input.nama,
     input.kekuatan,
@@ -123,7 +132,7 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
 
   const candidate = findBestLayout(
     cell,
-    fontNames.length > 0 ? fontNames : ["Helvetica"],
+    autoFonts.length > 0 ? autoFonts : ["Helvetica"],
     {
       mode: input.mode,
       cols: input.cols,
@@ -134,8 +143,8 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     measurer,
   );
 
-  // Fallback: if nothing fits, use smallest readable defaults.
-  const font = candidate?.font ?? fontNames[0] ?? "Helvetica";
+  // Fallback: if nothing fits, use the preferred font at a readable size.
+  const font = candidate?.font ?? autoFonts[0] ?? fontNames[0] ?? "Helvetica";
   const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
   const cols = candidate?.cols ?? 4;
   const rows = candidate?.rows ?? 4;
@@ -231,7 +240,8 @@ function drawCell(
   });
 }
 
-// Bold simulation: draw text twice at a 0.2pt x-offset.
+// Bold simulation: draw text twice at a 0.2pt x-offset. Text is
+// center-aligned within the cell's text box.
 function drawLine(
   doc: PDFKit.PDFDocument,
   text: string,
@@ -240,18 +250,15 @@ function drawLine(
   maxW: number,
 ): void {
   const display = nbSpacify(text);
-  doc.text(display, x, y, {
+  const opts: PDFKit.Mixins.TextOptions = {
     width: maxW,
     lineBreak: false,
     ellipsis: false,
     height: 1,
-  });
-  doc.text(display, x + 0.2, y, {
-    width: maxW,
-    lineBreak: false,
-    ellipsis: false,
-    height: 1,
-  });
+    align: "center",
+  };
+  doc.text(display, x, y, opts);
+  doc.text(display, x + 0.2, y, opts);
 }
 
 // Approximate glyph-width fitting metric (Helvetica metric, scaled).

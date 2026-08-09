@@ -10,7 +10,7 @@
 // Fitting   : auto mode line 1 truncation is last resort; manual
 //             truncates name first; words wider than box → reject.
 // Selection : auto maximizes (cellsCount, fontSize, cols); font size
-//             clamped [4.0, 6.0], auto floor 4.8, default 5.0.
+//             clamped [4.8, 5.0] (5.0 → 4.8), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -32,7 +32,8 @@ export const MAX_ROWS = 7;
 export const MIN_FONT_SIZE = 4.0;
 export const MAX_FONT_SIZE = 6.0;
 export const DEFAULT_FONT_SIZE = 5.0;
-export const AUTO_MIN_FONT_SIZE = 4.8; // auto mode reduces only to 4.8
+export const AUTO_MAX_FONT_SIZE = 5.0; // auto mode starts at 5.0 …
+export const AUTO_MIN_FONT_SIZE = 4.8; // … and reduces only to 4.8
 export const FONT_STEP = 0.1;
 
 export const BORDER_LINE_WIDTH = 0.3;
@@ -346,7 +347,7 @@ export function findBestLayout(
     // Skip grids smaller than an already-found best cell count.
     if (best && cellsCount < best.cellsCount) continue;
     for (const font of sortedFonts) {
-      for (let size = MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
+      for (let size = AUTO_MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
         const geo = computeCellGeometry(g.cols, g.rows);
         const fitted = fitCell(cell, geo, font, fs, measurer, mode);
