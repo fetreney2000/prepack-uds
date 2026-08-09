@@ -9,9 +9,9 @@
 //             Lines 3/4 NEVER wrap (NBSP).
 // Fitting   : text is NEVER truncated — a grid/size only qualifies if
 //             every line fits fully; otherwise it is rejected.
-// Selection : auto solver picks the SMALLEST grid that fits, preferring
-//             the font order then the largest size; font size range
-//             [4.8, 5.0] (5.0 → 4.8), default 5.0.
+// Selection : auto solver picks the LARGEST grid that fits (most cells
+//             per label), preferring the font order then the largest
+//             size; font size range [4.8, 5.0] (5.0 → 4.8), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -189,11 +189,11 @@ export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
  * Find the best label layout for a cell's content.
  *
  * auto (solver):
- *   - tries grids (cols 4..8, rows 4..7) smallest-first (fewest cells)
+ *   - tries grids (cols 4..8, rows 4..7) largest-first (most cells)
  *   - within a grid, prefers the font order (Bell Centennial → Inter →
  *     Roboto) then the largest size (5.0 → 4.8)
  *   - returns the FIRST combination that fits ALL text fully (no
- *     truncation, no overflow) → the smallest possible grid
+ *     truncation, no overflow) → the largest possible grid (most cells)
  *
  * manual:
  *   - uses client-provided cols/rows/font/fontSize (clamped)
@@ -227,14 +227,15 @@ export function findBestLayout(
     };
   }
 
-  // Auto: solve for the SMALLEST grid that fits all text without
-  // truncation or overflow. Grids are tried smallest-first; within a
-  // grid we prefer the preferred font order, then the largest size.
+  // Auto: solve for the LARGEST grid that fits all text without
+  // truncation or overflow (more cells per label). Grids are tried
+  // largest-first; within a grid we prefer the preferred font order,
+  // then the largest size.
   const gridList: { cols: number; rows: number }[] = [];
   for (const g of enumerateGrids()) gridList.push(g);
 
-  // Smallest grid first (fewest cells).
-  gridList.sort((a, b) => a.cols * a.rows - b.cols * b.rows);
+  // Largest grid first (most cells).
+  gridList.sort((a, b) => b.cols * b.rows - a.cols * a.rows);
 
   // fonts are provided in preference order (Bell Centennial → Inter →
   // Roboto); do NOT re-sort so preference is respected.
