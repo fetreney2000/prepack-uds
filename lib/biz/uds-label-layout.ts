@@ -4,9 +4,10 @@
 //
 // Page      : 3.5" x 2.3" (252pt x 165.6pt); margins 0.2cm all sides
 // Grid      : cols ∈ [4..8], rows ∈ [4..7] (min 4×4, max 8×7)
-// Cell      : 4 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
-// Lines     : 1 = Nama, 2 = Kekuatan, 3 = Kelompok, 4 = Luput.
-//             Lines 3/4 NEVER wrap (NBSP).
+// Cell      : 4 or 5 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
+// Lines     : Nama (1 or 2 lines), Kekuatan, Kelompok, Luput. Nama may
+//             wrap onto the top + second-top lines to avoid truncation.
+//             Kelompok/Luput NEVER wrap (NBSP).
 // Fitting   : text is NEVER truncated — a grid/size only qualifies if
 //             every line fits fully; otherwise it is rejected.
 // Selection : auto solver picks the LARGEST grid that fits (most cells
@@ -49,10 +50,10 @@ export interface TextMeasurer {
 }
 
 export interface CellText {
-  line1: string; // canonical Nama (uppercased)
-  line2: string; // Kekuatan (uppercased) or ''
-  line3: string; // "B.N : " + Kelompok (uppercased, NBSP)
-  line4: string; // "EXP : " + Luput (uppercased, NBSP)
+  nama: string;       // canonical Nama (uppercased)
+  kekuatan: string;   // Kekuatan (uppercased) or ''
+  kelompok: string;   // Kelompok (uppercased, NBSP)
+  luput: string;      // Luput (uppercased, NBSP)
 }
 
 export type UdsMode = 'auto' | 'manual';
@@ -81,8 +82,8 @@ export interface UdsLabelCandidate {
   rows: number;
   cellsCount: number;
   mode: UdsMode;
-  lines: CellText[];      // per-cell final (truncated) text
-  fits: boolean;          // all cells fit after final pass
+  lines: string[];    // final rendered lines (4 or 5)
+  fits: boolean;      // all cells fit after final pass
 }
 
 // ---------- Pure helpers ----------
@@ -116,7 +117,8 @@ export function nbSpacify(text: string): string {
 }
 
 /**
- * Build the 4 cell lines from canonical names + group + expiry.
+ * Build the raw cell content from canonical names + group + expiry.
+ * Nama may wrap onto a second line during fitting (4 or 5 lines total).
  */
 export function buildCellLines(
   nama: string,
@@ -129,20 +131,23 @@ export function buildCellLines(
   const g = (kelompok ?? '').trim().toUpperCase();
   const e = (luput ?? '').trim().toUpperCase();
   return {
-    line1: n,
-    line2: k,
-    line3: nbSpacify(g),
-    line4: nbSpacify(e),
+    nama: n,
+    kekuatan: k,
+    kelompok: nbSpacify(g),
+    luput: nbSpacify(e),
   };
 }
 
 // ---------- Fitting ----------
 
 /**
- * Compute whether all 4 lines of a cell fit at the given grid + size.
+ * Compute the final lines for a cell at the given grid + size.
+ *
+ * Nama is permitted to occupy the top and second-top line (wrapped at a
+ * word boundary) to avoid truncation, so a cell can have 4 or 5 lines:
+ *   [namaL1, namaL2?, kekuatan, kelompok, luput]
  * Text is NEVER truncated — a grid/size that cannot fit every line
- * fully is rejected (returns null). Returns the original cell text
- * unchanged when it fits.
+ * fully (width AND height) is rejected (returns null).
  */
 export function fitCell(
   cell: CellText,
@@ -151,17 +156,62 @@ export function fitCell(
   fontSize: number,
   measurer: TextMeasurer,
   _mode: UdsMode,
-): CellText | null {
+): { lines: string[] } | null {
   const w = geo.textWidthPt;
 
-  // Never truncate: every line must fit fully at this size.
-  for (const line of [cell.line1, cell.line2, cell.line3, cell.line4]) {
+  // Wrap nama into up to 2 lines to avoid truncation.
+  const namaLines = wrapNama(cell.nama, w, measurer, fontName, fontSize);
+  if (!namaLines) return null;
+
+  const lines = [...namaLines, cell.kekuatan, cell.kelompok, cell.luput];
+
+  // Width: every line must fit fully.
+  for (const line of lines) {
     if (!fitsLine(line, w, measurer, fontName, fontSize)) {
       return null;
     }
   }
 
-  return { line1: cell.line1, line2: cell.line2, line3: cell.line3, line4: cell.line4 };
+  // Height: the total line block must fit the cell's text height.
+  const lineHeight = fontSize + LINE_GAP;
+  const totalH = lines.length * lineHeight;
+  if (totalH > geo.textHeightPt) {
+    return null;
+  }
+
+  return { lines };
+}
+
+/**
+ * Wrap nama into 1 or 2 lines at word boundaries so it fits the width
+ * without truncation. Returns null if it cannot fit even on two lines.
+ */
+function wrapNama(
+  nama: string,
+  w: number,
+  measurer: TextMeasurer,
+  fontName: string,
+  fontSize: number,
+): string[] | null {
+  if (nama.length === 0) return [''];
+  if (measurer.widthOfString(nama, fontName, fontSize) <= w) return [nama];
+
+  const words = nama.split(' ');
+  // Try to split at each word boundary; the first line must fit, and
+  // the remainder must fit on the second line.
+  for (let i = 1; i < words.length; i++) {
+    const first = words.slice(0, i).join(' ');
+    const rest = words.slice(i).join(' ');
+    if (first.length === 0 || rest.length === 0) continue;
+    if (
+      measurer.widthOfString(first, fontName, fontSize) <= w &&
+      measurer.widthOfString(rest, fontName, fontSize) <= w
+    ) {
+      return [first, rest];
+    }
+  }
+
+  return null;
 }
 
 function fitsLine(
@@ -223,7 +273,7 @@ export function findBestLayout(
       rows,
       cellsCount: cols * rows,
       mode,
-      lines: [fitted],
+      lines: fitted.lines,
       fits: true,
     };
   }
@@ -256,7 +306,7 @@ export function findBestLayout(
               rows: g.rows,
               cellsCount: g.cols * g.rows,
               mode,
-              lines: [fitted],
+              lines: fitted.lines,
               fits: true,
             };
           }

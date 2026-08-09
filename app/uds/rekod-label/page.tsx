@@ -38,7 +38,16 @@ async function printLabel(record: UdsRekodLabel) {
       mode: res.headers.get("X-UDS-Mode"),
     };
     if (meta.font && meta.fontSize && meta.grid && meta.cells) {
-      toast.success(`${meta.fontSize} — ${meta.grid} (${meta.cells})`);
+      const content = [
+        [record.NamaUbat, record.Kekuatan].filter(Boolean).join(" "),
+        record.Kelompok,
+        record.Luput,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      toast.success(
+        `${content} — ${meta.font} ${meta.fontSize}pt — ${meta.grid} (${meta.cells})`,
+      );
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

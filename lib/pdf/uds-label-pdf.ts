@@ -148,7 +148,13 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
   const cols = candidate?.cols ?? 4;
   const rows = candidate?.rows ?? 4;
-  const fitted = candidate?.lines[0] ?? cell;
+
+  // Final lines to render (4 or 5). If the solver found nothing, build
+  // a best-effort 4-line layout from the raw cell.
+  let fitted: string[] = candidate?.lines ?? [];
+  if (fitted.length === 0) {
+    fitted = [cell.nama, cell.kekuatan, cell.kelompok, cell.luput].filter((l) => l.length > 0);
+  }
 
   const doc = new PDFDocument({
     size: [252, 165.6],
@@ -216,7 +222,7 @@ function drawCell(
   y: number,
   w: number,
   h: number,
-  cell: { line1: string; line2: string; line3: string; line4: string },
+  lines: string[],
   fontSize: number,
 ): void {
   // Single-line border.
@@ -227,7 +233,6 @@ function drawCell(
   doc.fontSize(fontSize);
 
   const textW = w - CELL_PADDING_LEFT_PT - CELL_PADDING_RIGHT_PT;
-  const lines = [cell.line1, cell.line2, cell.line3, cell.line4];
   const lineHeight = fontSize + LINE_GAP;
   const totalTextH = lines.length * lineHeight;
   const startY = y + (h - totalTextH) / 2;
