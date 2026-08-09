@@ -1,6 +1,7 @@
 // UDS Rekod Label — Tambah Rekod form modal
 // Wires createUdsRekodLabel (server-generated, year-scoped Rujukan) with a
-// live Rujukan preview and a UDS medication combobox.
+// live Rujukan preview, a shadcn Combobox for the UDS medication, and a
+// shadcn date-picker (Popover + Calendar) for the luput field.
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -16,11 +17,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format, parse } from "date-fns";
 import { useUdsUbatList, type UdsUbat } from "@/lib/queries";
 import { createUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
 
@@ -41,15 +50,25 @@ const EMPTY = {
   Penyedia: "",
 };
 
+// UDS ubat as combobox items (value = Nama, label = Nama + Kekuatan).
+function toItems(list: UdsUbat[]) {
+  return list.map((m) => ({
+    value: m.Nama,
+    label: m.Kekuatan ? `${m.Nama} · ${m.Kekuatan}` : m.Nama,
+    med: m,
+  }));
+}
+
 export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const { data: ubatList } = useUdsUbatList();
 
   const [form, setForm] = useState(EMPTY);
   const [ubo, setUbo] = useState<UdsUbat | null>(null);
-  const [medOpen, setMedOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+
+  const items = useMemo(() => toItems(ubatList ?? []), [ubatList]);
 
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -80,15 +99,17 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
     };
   }, [form.Tarikh, open]);
 
-  const selectMed = (m: UdsUbat) => {
-    setUbo(m);
-    setForm((f) => ({
-      ...f,
-      NamaUbat: m.Nama,
-      Kekuatan: m.Kekuatan ?? f.Kekuatan,
-    }));
-    setMedOpen(false);
+  const handleLuputSelect = (date?: Date) => {
+    if (!date) return;
+    // Store in the accepted expiry grammar: MM/YYYY.
+    setForm((f) => ({ ...f, Luput: format(date, "MM/yyyy") }));
   };
+
+  const selectedLuput = useMemo(() => {
+    if (!/^\d{1,2}\/\d{4}$/.test(form.Luput)) return undefined;
+    const d = parse(form.Luput, "MM/yyyy", new Date());
+    return isNaN(d.getTime()) ? undefined : d;
+  }, [form.Luput]);
 
   const handleSubmit = async () => {
     if (!form.NamaUbat.trim() || !form.Kelompok.trim() || !form.Luput.trim() || !form.Penyedia.trim()) {
@@ -147,70 +168,63 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="uds-ubat">Nama Ubat</Label>
-            <div className="flex gap-2">
-              <Input
-                id="uds-ubat"
-                value={form.NamaUbat}
-                onChange={set("NamaUbat")}
-                placeholder="Nama ubat"
-                className="flex-1"
-              />
-              <Popover open={medOpen} onOpenChange={setMedOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button type="button" variant="outline" role="combobox" aria-expanded={medOpen}>
-                      <ChevronsUpDown className="size-4" />
-                    </Button>
-                  }
-                />
-                <PopoverContent className="w-72 p-0">
-                  <Command>
-                    <CommandInput placeholder="Cari ubat UDS..." />
-                    <CommandList>
-                      <CommandEmpty>Tiada ubat dijumpai.</CommandEmpty>
-                      <CommandGroup>
-                        {(ubatList ?? []).map((m) => (
-                          <CommandItem
-                            key={m.ID}
-                            value={m.Nama}
-                            onSelect={() => selectMed(m)}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 size-4",
-                                ubo?.ID === m.ID ? "opacity-100" : "opacity-0",
-                              )}
-                            />
-                            <span>{m.Nama}</span>
-                            {m.Kekuatan && (
-                              <span className="ml-2 text-xs text-muted-foreground">{m.Kekuatan}</span>
-                            )}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+            <Label>Nama Ubat</Label>
+            <Combobox
+              value={form.NamaUbat || null}
+              onValueChange={(v) => {
+                const name = typeof v === "string" ? v : null;
+                const med = items.find((i) => i.value === name)?.med;
+                setUbo(med ?? null);
+                setForm((f) => ({
+                  ...f,
+                  NamaUbat: name ?? "",
+                  Kekuatan: med?.Kekuatan ?? f.Kekuatan,
+                }));
+              }}
+            >
+              <ComboboxInput />
+              <ComboboxContent>
+                <ComboboxEmpty>Tiada ubat dijumpai.</ComboboxEmpty>
+                <ComboboxList>
+                  {items.map((item) => (
+                    <ComboboxItem key={item.value} value={item.value}>
+                      {item.label}
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="uds-kekuatan">Kekuatan</Label>
-              <Input id="uds-kekuatan" value={form.Kekuatan} onChange={set("Kekuatan")} placeholder="cth: 5mg" />
+              <Input id="uds-kekuatan" value={form.Kekuatan} onChange={set("Kekuatan")} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="uds-kelompok">Kelompok</Label>
-              <Input id="uds-kelompok" value={form.Kelompok} onChange={set("Kelompok")} placeholder="cth: Batch 1" />
+              <Input id="uds-kelompok" value={form.Kelompok} onChange={set("Kelompok")} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="uds-luput">Luput</Label>
-              <Input id="uds-luput" value={form.Luput} onChange={set("Luput")} placeholder="cth: 12/26" />
+              <Label>Luput</Label>
+              <Popover>
+                <PopoverTrigger
+                  render={<Button variant="outline" className="w-full justify-start" />}
+                >
+                  <CalendarIcon className="size-4" />
+                  {form.Luput}
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedLuput}
+                    onSelect={handleLuputSelect}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="uds-kuantiti">Kuantiti</Label>
@@ -220,14 +234,13 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
                 min={0}
                 value={form.Kuantiti}
                 onChange={set("Kuantiti")}
-                placeholder="0"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="uds-penyedia">Penyedia</Label>
-            <Input id="uds-penyedia" value={form.Penyedia} onChange={set("Penyedia")} placeholder="Nama penyedia" />
+            <Input id="uds-penyedia" value={form.Penyedia} onChange={set("Penyedia")} />
           </div>
         </div>
 
