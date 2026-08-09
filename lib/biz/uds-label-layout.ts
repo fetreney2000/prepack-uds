@@ -275,6 +275,8 @@ export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
  *     largest font size (5.0 → 4.8) that fits ALL text fully
  *   - returns the FIRST grid that fits (no truncation, no overflow) →
  *     the largest possible grid (most cells per label)
+ *   - normal sizes are >= MIN_FONT_SIZE (4.6); the sub-4.6pt floor is
+ *     used ONLY when no grid fits at 4.6pt (long unbreakable names)
  *
  * manual:
  *   - uses client-provided cols/rows/font/fontSize (clamped)
@@ -320,11 +322,35 @@ export function findBestLayout(
 
   const candidates = fonts.length > 0 ? fonts : ['Helvetica'];
 
+  // Pass 1: only normal font sizes (>= MIN_FONT_SIZE). The sub-4.6pt
+  // floor is reserved for long names that fit no grid at normal size.
+  const normal = solveAuto(gridList, candidates, MIN_FONT_SIZE, AUTO_MAX_FONT_SIZE, cell, measurer, mode);
+  if (normal) return normal;
+
+  // Pass 2: nothing fits at normal size — allow the long-word font floor
+  // (down to HARD_MIN_FONT_SIZE) so an oversized name can still fit.
+  return solveAuto(gridList, candidates, HARD_MIN_FONT_SIZE, MIN_FONT_SIZE - FONT_STEP, cell, measurer, mode);
+}
+
+/**
+ * Solve the auto layout restricting font sizes to [minSize, maxSize].
+ * Returns the largest grid that fits; within that grid the largest font
+ * size. Returns null if no grid fits in the allowed size range.
+ */
+function solveAuto(
+  gridList: { cols: number; rows: number }[],
+  candidates: string[],
+  minSize: number,
+  maxSize: number,
+  cell: CellText,
+  measurer: TextMeasurer,
+  mode: UdsMode,
+): UdsLabelCandidate | null {
   for (const g of gridList) {
     const geo = computeCellGeometry(g.cols, g.rows);
     let bestFit: UdsLabelCandidate | null = null;
     for (const font of candidates) {
-      for (let size = AUTO_MAX_FONT_SIZE; size >= HARD_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
+      for (let size = maxSize; size >= minSize - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
         const fitted = fitCell(cell, geo, font, fs, measurer);
         if (fitted) {
