@@ -59,6 +59,12 @@ export default function UdsLabelPrintPage() {
   const [rows, setRows] = useState<string>("5");
   const [cols, setCols] = useState<string>("5");
   const [fitStatus, setFitStatus] = useState<FitStatus>("fit");
+  const [autoValues, setAutoValues] = useState<{
+    font: string;
+    fontSize: string;
+    rows: string;
+    cols: string;
+  } | null>(null);
 
   // Build the API URL. The iframe src changes on every option change,
   // which triggers a fresh fetch → live preview.
@@ -101,6 +107,54 @@ export default function UdsLabelPrintPage() {
     };
   }, [checkUrl, id, mode]);
 
+  // Capture the auto solver's chosen values so switching to manual mode
+  // can pre-fill the controls with the auto result.
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    const url = `/api/uds/${encodeURIComponent(id)}/label.pdf?mode=auto&check=1`;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(url);
+        if (cancelled) return;
+        const body = (await res.json()) as {
+          fits?: boolean;
+          font?: string;
+          fontSize?: number;
+          cols?: number;
+          rows?: number;
+        };
+        if (body?.font && body?.fontSize && body?.cols && body?.rows) {
+          setAutoValues({
+            font: body.font,
+            fontSize: body.fontSize.toFixed(1),
+            rows: String(body.rows),
+            cols: String(body.cols),
+          });
+        }
+      } catch {
+        // Non-fatal — keep currently known auto values.
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [id]);
+
+  const handleModeChange = (v: string | null) => {
+    const next = (v as UdsMode) ?? "auto";
+    // When switching INTO manual, pre-fill controls with the auto result
+    // (falling back to current values if the solver hasn't returned yet).
+    if (next === "manual" && autoValues) {
+      setFont(autoValues.font);
+      setFontSize(autoValues.fontSize);
+      setRows(autoValues.rows);
+      setCols(autoValues.cols);
+    }
+    setMode(next);
+  };
+
   const blockPrint = !id || (mode === "manual" && fitStatus === "unfit");
 
   const handlePrint = () => {
@@ -139,7 +193,7 @@ export default function UdsLabelPrintPage() {
         <div className="space-y-5 rounded-lg border bg-card p-4">
           <Tabs
             value={mode}
-            onValueChange={(v) => setMode((v as UdsMode) ?? "auto")}
+            onValueChange={handleModeChange}
           >
             <Label className="mb-2 block">Mod</Label>
             <TabsList className="w-full">
