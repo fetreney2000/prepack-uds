@@ -30,8 +30,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parse } from "date-fns";
-import { useUdsUbatList, type UdsUbat } from "@/lib/queries";
-import { createUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
+import { useUdsUbatList, type UdsUbat, type UdsRekodLabel } from "@/lib/queries";
+import { createUdsRekodLabel, updateUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
 import { todayInKl } from "@/lib/format";
 
 const today = todayInKl;
@@ -39,6 +39,7 @@ const today = todayInKl;
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  editing?: UdsRekodLabel | null;
 }
 
 const EMPTY = {
@@ -51,7 +52,7 @@ const EMPTY = {
   Penyedia: "",
 };
 
-export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
+export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props) {
   const queryClient = useQueryClient();
   const { data: ubatList } = useUdsUbatList();
 
@@ -65,14 +66,28 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Reset on open.
+  // Reset on open — pre-fill when editing, else blank.
   useEffect(() => {
     if (open) {
-      setForm(EMPTY);
-      setUbo(null);
-      setPreview(null);
+      if (editing) {
+        setForm({
+          Tarikh: editing.Tarikh,
+          NamaUbat: editing.NamaUbat,
+          Kekuatan: editing.Kekuatan ?? "",
+          Kelompok: editing.Kelompok,
+          Luput: editing.Luput,
+          Kuantiti: String(editing.Kuantiti),
+          Penyedia: editing.Penyedia,
+        });
+        setUbo(null);
+        setPreview(editing.Rujukan);
+      } else {
+        setForm(EMPTY);
+        setUbo(null);
+        setPreview(null);
+      }
     }
-  }, [open]);
+  }, [open, editing]);
 
   // Live Rujukan preview from the chosen Tarikh (no reserve).
   useEffect(() => {
@@ -114,7 +129,7 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
       return;
     }
     setSaving(true);
-    const res = await createUdsRekodLabel({
+    const payload = {
       Tarikh: form.Tarikh,
       NamaUbat: form.NamaUbat,
       Kekuatan: form.Kekuatan || null,
@@ -122,11 +137,14 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
       Luput: form.Luput,
       Kuantiti: kuantiti,
       Penyedia: form.Penyedia,
-      NamaUbatID: ubo?.ID ?? null,
-    });
+      NamaUbatID: ubo?.ID ?? editing?.NamaUbatID ?? null,
+    };
+    const res = editing
+      ? await updateUdsRekodLabel(editing.ID, payload)
+      : await createUdsRekodLabel(payload);
     setSaving(false);
     if (res.ok) {
-      toast.success(`Rekod ${res.data?.Rujukan} disimpan.`);
+      toast.success(editing ? "Rekod dikemas kini." : `Rekod ${res.data?.Rujukan} disimpan.`);
       queryClient.invalidateQueries({ queryKey: ["uds-rekod-label"] });
       queryClient.invalidateQueries({ queryKey: ["uds-laporan"] });
       onOpenChange(false);
@@ -139,9 +157,11 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Tambah Rekod Label UDS</DialogTitle>
+          <DialogTitle>{editing ? "Sunting Rekod Label UDS" : "Tambah Rekod Label UDS"}</DialogTitle>
           <DialogDescription>
-            Rujukan dijana automatik mengikut tahun. Isi butiran label di bawah.
+            {editing
+              ? "Rujukan tidak boleh diubah. Kemas kini butiran label di bawah."
+              : "Rujukan dijana automatik mengikut tahun. Isi butiran label di bawah."}
           </DialogDescription>
         </DialogHeader>
 
@@ -152,7 +172,7 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
               <Input id="uds-tarikh" type="date" value={form.Tarikh} onChange={set("Tarikh")} />
             </div>
             <div className="space-y-1.5">
-              <Label>Rujukan (Pratonton)</Label>
+              <Label>{editing ? "Rujukan" : "Rujukan (Pratonton)"}</Label>
               <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
                 {preview ?? "—"}
               </div>

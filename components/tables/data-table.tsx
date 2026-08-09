@@ -12,6 +12,7 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type Header,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import {
@@ -24,7 +25,8 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -87,9 +89,9 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder ? null : (
+                      <SortableHeader header={header} />
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -146,5 +148,33 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
     </div>
+  );
+}
+
+// Sortable column header — click toggles asc → desc → none.
+function SortableHeader<TData, TValue>({
+  header,
+}: {
+  header: Header<TData, TValue>;
+}) {
+  const canSort = header.column.getCanSort();
+  const sorted = header.column.getIsSorted();
+
+  if (!canSort) {
+    return flexRender(header.column.columnDef.header, header.getContext());
+  }
+
+  const Icon =
+    sorted === "asc" ? ChevronUp : sorted === "desc" ? ChevronDown : ChevronsUpDown;
+
+  return (
+    <button
+      type="button"
+      onClick={header.column.getToggleSortingHandler()}
+      className={cn("-mx-2 flex items-center gap-1 rounded px-2 py-1 text-left font-medium select-none hover:bg-muted")}
+    >
+      {flexRender(header.column.columnDef.header, header.getContext())}
+      <Icon className={cn("size-3.5", sorted ? "text-primary" : "text-muted-foreground")} />
+    </button>
   );
 }

@@ -1,4 +1,4 @@
-// UDS Rekod Label — searchable/sortable/paginated list (read-only, Phase 1)
+// UDS Rekod Label — searchable/sortable/paginated list
 "use client";
 
 import { useMemo, useState } from "react";
@@ -8,14 +8,46 @@ import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
 import { useUdsRekodLabelList, type UdsRekodLabel } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { UdsRekodLabelForm } from "@/components/modals/uds-rekod-label-form";
-import { Plus, Printer } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { deleteUdsRekodLabel } from "@/app/actions/uds";
+import { Plus, Printer, Pencil, Trash2 } from "lucide-react";
 
 export default function UdsRekodLabelPage() {
   const { data, isLoading, isError, error } = useUdsRekodLabelList();
-  const [formOpen, setFormOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<UdsRekodLabel | null>(null);
+  const [deleting, setDeleting] = useState<UdsRekodLabel | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    const res = await deleteUdsRekodLabel(deleting.ID);
+    setDeleteBusy(false);
+    if (res.ok) {
+      toast.success("Rekod dipadam.");
+      queryClient.invalidateQueries({ queryKey: ["uds-rekod-label"] });
+      queryClient.invalidateQueries({ queryKey: ["uds-laporan"] });
+      setDeleting(null);
+    } else {
+      toast.error(res.error ?? "Gagal memadam rekod.");
+    }
+  };
 
   const columns = useMemo<ColumnDef<UdsRekodLabel>[]>(
     () => [
@@ -58,18 +90,34 @@ export default function UdsRekodLabelPage() {
       },
       {
         id: "actions",
-        header: "Cetak",
+        header: "Tindakan",
         cell: ({ row }) => (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Cetak label"
-            render={
-              <Link href={`/uds/rekod-label/${row.original.ID}/print`} />
-            }
-          >
-            <Printer className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Cetak label"
+              render={<Link href={`/uds/rekod-label/${row.original.ID}/print`} />}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Sunting rekod"
+              onClick={() => setEditing(row.original)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Padam rekod"
+              onClick={() => setDeleting(row.original)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
         ),
       },
     ],
@@ -80,7 +128,7 @@ export default function UdsRekodLabelPage() {
     <PageShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Rekod Label UDS</h1>
-        <Button onClick={() => setFormOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4" />
           Tambah Rekod
         </Button>
@@ -105,7 +153,33 @@ export default function UdsRekodLabelPage() {
         />
       )}
 
-      <UdsRekodLabelForm open={formOpen} onOpenChange={setFormOpen} />
+      <UdsRekodLabelForm
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
+      <UdsRekodLabelForm
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        editing={editing}
+      />
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Padam Rekod?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Padam rekod {deleting?.Rujukan} — {deleting?.NamaUbat}? Tindakan ini
+              tidak boleh dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBusy}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleteBusy}>
+              {deleteBusy ? "Memadam..." : "Padam"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }
