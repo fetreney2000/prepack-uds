@@ -23,7 +23,6 @@ import {
   availableSizePt,
   DEFAULT_FONT_SIZE,
   BORDER_LINE_WIDTH,
-  INNER_BORDER_OFFSET_PT,
   CELL_PADDING_LEFT_PT,
   CELL_PADDING_RIGHT_PT,
   LINE_GAP,
@@ -34,8 +33,8 @@ import {
 const FONT_DIR = join(process.cwd(), "public", "fonts");
 
 // Auto-mode fonts, in order of preference. The user wants labels in
-// Bell Centennial, falling back to Roboto, then Inter.
-const PREFERRED_FONTS = ["Bell Centennial", "Roboto", "Inter"];
+// Bell Centennial, falling back to Inter, then Roboto.
+const PREFERRED_FONTS = ["Bell Centennial", "Inter", "Roboto"];
 
 export interface UdsPdfInput {
   nama: string;
@@ -219,11 +218,10 @@ function drawCell(
   cell: { line1: string; line2: string; line3: string; line4: string },
   fontSize: number,
 ): void {
-  // Double thin borders: outer 0.3pt, inner offset 0.6pt.
+  // Single-line border.
   doc.lineWidth(BORDER_LINE_WIDTH);
   doc.strokeColor("#000000");
   doc.rect(x, y, w, h).stroke();
-  doc.rect(x + INNER_BORDER_OFFSET_PT, y + INNER_BORDER_OFFSET_PT, w - 2 * INNER_BORDER_OFFSET_PT, h - 2 * INNER_BORDER_OFFSET_PT).stroke();
 
   doc.fontSize(fontSize);
 

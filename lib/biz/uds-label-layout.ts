@@ -9,8 +9,9 @@
 //             Lines 3/4 NEVER wrap (NBSP).
 // Fitting   : text is NEVER truncated — a grid/size only qualifies if
 //             every line fits fully; otherwise it is rejected.
-// Selection : auto maximizes (cellsCount, fontSize, cols); font size
-//             clamped [4.8, 5.0] (5.0 → 4.8), default 5.0.
+// Selection : auto solver picks the SMALLEST grid that fits, preferring
+//             the font order then the largest size; font size range
+//             [4.8, 5.0] (5.0 → 4.8), default 5.0.
 // ============================================================
 
 // ---------- Layout constants ----------
@@ -172,19 +173,6 @@ function fitsLine(
   return line.length === 0 || measurer.widthOfString(line, fontName, fontSize) <= w;
 }
 
-// ---------- Candidate comparison ----------
-
-/**
- * Compare two candidates. Prefer more cells, then larger font size,
- * then more columns. Stable for deterministic output.
- */
-export function compareCandidates(a: UdsLabelCandidate, b: UdsLabelCandidate): number {
-  if (a.cellsCount !== b.cellsCount) return b.cellsCount - a.cellsCount;
-  if (a.fontSize !== b.fontSize) return b.fontSize - a.fontSize;
-  if (a.cols !== b.cols) return b.cols - a.cols;
-  return 0;
-}
-
 // ---------- Grid enumeration ----------
 
 export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
@@ -200,11 +188,12 @@ export function* enumerateGrids(): Generator<{ cols: number; rows: number }> {
 /**
  * Find the best label layout for a cell's content.
  *
- * auto:
- *   - tries every grid (cols 4..8, rows 4..7), sorted by cell count asc
- *   - reduces font from MAX to AUTO_MIN (4.8) in FONT_STEP increments
- *   - tries fonts alphabetically (provided list)
- *   - picks candidate maximizing (cellsCount, fontSize, cols)
+ * auto (solver):
+ *   - tries grids (cols 4..8, rows 4..7) smallest-first (fewest cells)
+ *   - within a grid, prefers the font order (Bell Centennial → Inter →
+ *     Roboto) then the largest size (5.0 → 4.8)
+ *   - returns the FIRST combination that fits ALL text fully (no
+ *     truncation, no overflow) → the smallest possible grid
  *
  * manual:
  *   - uses client-provided cols/rows/font/fontSize (clamped)
@@ -238,50 +227,42 @@ export function findBestLayout(
     };
   }
 
-  // Auto: enumerate grids; prefer starting at 5x5 minimum where possible.
-  // We enumerate all grids but the compare prefers more cells, so larger
-  // grids win if they fit.
+  // Auto: solve for the SMALLEST grid that fits all text without
+  // truncation or overflow. Grids are tried smallest-first; within a
+  // grid we prefer the preferred font order, then the largest size.
   const gridList: { cols: number; rows: number }[] = [];
   for (const g of enumerateGrids()) gridList.push(g);
 
-  // Sort grids by cell count ascending so we evaluate smaller grids first,
-  // then larger; compareCandidates later picks the best.
+  // Smallest grid first (fewest cells).
   gridList.sort((a, b) => a.cols * a.rows - b.cols * b.rows);
 
-  const sortedFonts = [...fonts].sort();
-  let best: UdsLabelCandidate | null = null;
+  // fonts are provided in preference order (Bell Centennial → Inter →
+  // Roboto); do NOT re-sort so preference is respected.
+  const fontOrder = fonts.length > 0 ? fonts : ['Helvetica'];
 
   for (const g of gridList) {
-    const cellsCount = g.cols * g.rows;
-    // Skip grids smaller than an already-found best cell count.
-    if (best && cellsCount < best.cellsCount) continue;
-    for (const font of sortedFonts) {
+    const geo = computeCellGeometry(g.cols, g.rows);
+    for (const font of fontOrder) {
       for (let size = AUTO_MAX_FONT_SIZE; size >= AUTO_MIN_FONT_SIZE - 1e-9; size -= FONT_STEP) {
         const fs = round2(size);
-        const geo = computeCellGeometry(g.cols, g.rows);
         const fitted = fitCell(cell, geo, font, fs, measurer, mode);
         if (fitted) {
-          const candidate: UdsLabelCandidate = {
+          return {
             font,
             fontSize: fs,
             cols: g.cols,
             rows: g.rows,
-            cellsCount,
+            cellsCount: g.cols * g.rows,
             mode,
             lines: [fitted],
             fits: true,
           };
-          if (!best || compareCandidates(candidate, best) < 0) {
-            best = candidate;
-          }
-          // Larger font fits for this grid → no need to try smaller sizes.
-          break;
         }
       }
     }
   }
 
-  return best;
+  return null;
 }
 
 // ---------- Small utilities ----------
