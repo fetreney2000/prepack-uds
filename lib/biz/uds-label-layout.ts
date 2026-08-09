@@ -5,10 +5,10 @@
 // Page      : 3.5" x 2.3" (252pt x 165.6pt); margins 0.2cm all sides
 // Grid      : cols ∈ [4..8], rows ∈ [4..7] (min 4×4, max 8×7)
 // Cell      : 4 lines; padding L 1.5 / R 1.0 / V 1.0 pt; lineGap -0.2
-// Lines     : 1 = Nama, 2 = Kekuatan, 3 = "B.N : "+Kelompok,
-//             4 = "EXP : "+Luput. Lines 3/4 NEVER wrap (NBSP).
-// Fitting   : auto mode line 1 truncation is last resort; manual
-//             truncates name first; words wider than box → reject.
+// Lines     : 1 = Nama, 2 = Kekuatan, 3 = Kelompok, 4 = Luput.
+//             Lines 3/4 NEVER wrap (NBSP).
+// Fitting   : text is NEVER truncated — a grid/size only qualifies if
+//             every line fits fully; otherwise it is rejected.
 // Selection : auto maximizes (cellsCount, fontSize, cols); font size
 //             clamped [4.8, 5.0] (5.0 → 4.8), default 5.0.
 // ============================================================
@@ -129,63 +129,18 @@ export function buildCellLines(
   return {
     line1: n,
     line2: k,
-    line3: nbSpacify(`B.N : ${g}`),
-    line4: nbSpacify(`EXP : ${e}`),
+    line3: nbSpacify(g),
+    line4: nbSpacify(e),
   };
 }
 
-/** Split a line into words (normal spaces preserved → NBSP split). */
-function wordsOf(line: string): string[] {
-  return line.split('\u00A0');
-}
+// ---------- Fitting ----------
 
 /**
- * Check whether any single word in a line is wider than the box.
- * If so, the grid is rejected entirely (fitting rule).
- */
-export function hasWordWiderThanBox(
-  line: string,
-  textWidthPt: number,
-  measurer: TextMeasurer,
-  fontName: string,
-  fontSize: number,
-): boolean {
-  return wordsOf(line).some((w) => w.length > 0 && measurer.widthOfString(w, fontName, fontSize) > textWidthPt);
-}
-
-/**
- * Truncate a single-line string to fit a width, appending '...'.
- * Returns the original if it already fits.
- */
-export function truncateToFit(
-  line: string,
-  maxWidthPt: number,
-  measurer: TextMeasurer,
-  fontName: string,
-  fontSize: number,
-): string {
-  if (measurer.widthOfString(line, fontName, fontSize) <= maxWidthPt) return line;
-  let i = line.length;
-  // Cut from the end until "prefix..." fits.
-  while (i > 0) {
-    const candidate = line.slice(0, i) + '...';
-    if (measurer.widthOfString(candidate, fontName, fontSize) <= maxWidthPt) {
-      return candidate;
-    }
-    i--;
-  }
-  return '...';
-}
-
-/**
- * Compute the max font size that fits all 4 lines of a cell,
- * given the truncation policy. Returns candidate lines (final text)
- * or null if the grid/size cannot fit at all.
- *
- * Truncation priority:
- *   auto   → line 2 (kekuatan) first, then line 1 (name); lines 3/4
- *            truncate only if still too wide (NBSP, no wrap).
- *   manual → line 1 (name) first, then line 2; lines 3/4 same.
+ * Compute whether all 4 lines of a cell fit at the given grid + size.
+ * Text is NEVER truncated — a grid/size that cannot fit every line
+ * fully is rejected (returns null). Returns the original cell text
+ * unchanged when it fits.
  */
 export function fitCell(
   cell: CellText,
@@ -193,64 +148,18 @@ export function fitCell(
   fontName: string,
   fontSize: number,
   measurer: TextMeasurer,
-  mode: UdsMode,
+  _mode: UdsMode,
 ): CellText | null {
   const w = geo.textWidthPt;
 
-  // Words wider than the box → reject this grid entirely.
-  for (const line of [cell.line1, cell.line2]) {
-    if (hasWordWiderThanBox(line, w, measurer, fontName, fontSize)) return null;
-  }
-  // Lines 3/4 are NBSP-joined; a single NBSP word wider than box → reject.
-  for (const line of [cell.line3, cell.line4]) {
-    if (hasWordWiderThanBox(line, w, measurer, fontName, fontSize)) return null;
-  }
-
-  // Determine per-line truncation order.
-  const nameIsFirst = mode === 'manual';
-
-  let l1 = cell.line1;
-  let l2 = cell.line2;
-
-  if (nameIsFirst) {
-    // Manual: truncate name first, then kekuatan.
-    if (!fitsLine(l1, w, measurer, fontName, fontSize)) {
-      l1 = truncateToFit(l1, w, measurer, fontName, fontSize);
-    }
-    if (!fitsLine(l2, w, measurer, fontName, fontSize)) {
-      l2 = truncateToFit(l2, w, measurer, fontName, fontSize);
-    }
-  } else {
-    // Auto: truncate kekuatan first, then name (name is last resort).
-    if (!fitsLine(l2, w, measurer, fontName, fontSize)) {
-      l2 = truncateToFit(l2, w, measurer, fontName, fontSize);
-    }
-    if (!fitsLine(l1, w, measurer, fontName, fontSize)) {
-      l1 = truncateToFit(l1, w, measurer, fontName, fontSize);
+  // Never truncate: every line must fit fully at this size.
+  for (const line of [cell.line1, cell.line2, cell.line3, cell.line4]) {
+    if (!fitsLine(line, w, measurer, fontName, fontSize)) {
+      return null;
     }
   }
 
-  // Lines 3/4: NBSP no-wrap; truncate with '...' if still too wide.
-  let l3 = cell.line3;
-  let l4 = cell.line4;
-  if (!fitsLine(l3, w, measurer, fontName, fontSize)) {
-    l3 = nbSpacify(truncateToFit(l3.replace(/\u00A0/g, ' '), w, measurer, fontName, fontSize));
-  }
-  if (!fitsLine(l4, w, measurer, fontName, fontSize)) {
-    l4 = nbSpacify(truncateToFit(l4.replace(/\u00A0/g, ' '), w, measurer, fontName, fontSize));
-  }
-
-  // Final re-check: every line must fit after truncation.
-  if (
-    !fitsLine(l1, w, measurer, fontName, fontSize) ||
-    !fitsLine(l2, w, measurer, fontName, fontSize) ||
-    !fitsLine(l3, w, measurer, fontName, fontSize) ||
-    !fitsLine(l4, w, measurer, fontName, fontSize)
-  ) {
-    return null;
-  }
-
-  return { line1: l1, line2: l2, line3: l3, line4: l4 };
+  return { line1: cell.line1, line2: cell.line2, line3: cell.line3, line4: cell.line4 };
 }
 
 function fitsLine(
