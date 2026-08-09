@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { renderUdsLabelPdf } from "@/lib/pdf/uds-label-pdf";
+import { renderUdsLabelPdf, checkUdsLabelFit } from "@/lib/pdf/uds-label-pdf";
 import type { UdsMode } from "@/lib/biz/uds-label-layout";
 
 export const runtime = "nodejs";
@@ -93,6 +93,28 @@ async function handleGet(
   const rows = numParam(url, "rows");
   const font = url.searchParams.get("font") ?? undefined;
   const fontSize = numParam(url, "fontSize");
+  const checkOnly = url.searchParams.get("check") === "1";
+
+  const input = {
+    nama: canonicalNama,
+    kekuatan: canonicalKekuatan,
+    kelompok: (record as { Kelompok: string }).Kelompok,
+    luput: (record as { Luput: string }).Luput,
+    mode,
+    cols,
+    rows,
+    font,
+    fontSize,
+  };
+
+  // Live validation mode: return fit metadata as JSON without rendering.
+  if (checkOnly) {
+    const fit = await checkUdsLabelFit(input);
+    return NextResponse.json(fit, {
+      status: 200,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
 
   // Content-hash cache key: record + options.
   const cacheKey = `${recordId}_${mode}_${cols ?? "a"}_${rows ?? "a"}_${font ?? "a"}_${fontSize ?? "a"}`;
@@ -105,17 +127,19 @@ async function handleGet(
   }
 
   // Render fresh.
-  const result = await renderUdsLabelPdf({
-    nama: canonicalNama,
-    kekuatan: canonicalKekuatan,
-    kelompok: (record as { Kelompok: string }).Kelompok,
-    luput: (record as { Luput: string }).Luput,
-    mode,
-    cols,
-    rows,
-    font,
-    fontSize,
-  });
+  const result = await renderUdsLabelPdf(input);
+
+  // Manual mode that does not fit must be rejected (would truncate).
+  if (!result.fits) {
+    return NextResponse.json(
+      {
+        error: "Gabungan tidak sesuai.",
+        detail:
+          "Saiz fon dan grid yang dipilih tidak cukup untuk memuatkan semua teks tanpa pemotongan. Kurangkan saiz fon, tambah saiz grid, atau tukar font.",
+      },
+      { status: 422 },
+    );
+  }
 
   const meta: LayoutMeta = {
     font: result.font,

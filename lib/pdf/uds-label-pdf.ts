@@ -28,6 +28,8 @@ import {
   HARD_MIN_FONT_SIZE,
   type TextMeasurer,
   type UdsMode,
+  type CellText,
+  type UdsLabelCandidate,
 } from "@/lib/biz/uds-label-layout";
 
 const FONT_DIR = join(process.cwd(), "public", "fonts");
@@ -57,6 +59,7 @@ export interface UdsPdfResult {
   rows: number;
   cellsCount: number;
   mode: UdsMode;
+  fits: boolean; // false when the layout (esp. manual) cannot fit without truncation
 }
 
 interface LoadedFont {
@@ -101,29 +104,24 @@ async function loadFonts(): Promise<LoadedFont[]> {
 // A measurable font name is the base font name. Fonts are registered
 // under their base name for measurement + drawing.
 
-/**
- * Render a UDS label PDF. Returns a Promise resolving to the pdfkit
- * buffer + the chosen layout metadata (for the X-UDS-* headers).
- */
-export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
+interface SolvedLayout {
+  candidate: UdsLabelCandidate | null;
+  autoFonts: string[];
+  fontNames: string[];
+  fontMap: Map<string, Buffer>;
+  cell: CellText;
+}
+
+async function solveLayout(input: UdsPdfInput): Promise<SolvedLayout> {
   const loaded = await loadFonts();
   const fontNames = loaded.map((f) => f.name);
   const fontMap = new Map(loaded.map((f) => [f.name, f.data]));
 
-  // Solver font candidates (no preference), falling back to any loaded
-  // font if none of the candidates are available.
   const candidates = CANDIDATE_FONTS.filter((n) => fontNames.includes(n));
   const autoFonts = candidates.length > 0 ? candidates : fontNames;
 
-  const cell = buildCellLines(
-    input.nama,
-    input.kekuatan,
-    input.kelompok,
-    input.luput,
-  );
+  const cell = buildCellLines(input.nama, input.kekuatan, input.kelompok, input.luput);
 
-  // Create the document up-front so we can measure with the REAL font
-  // metrics (pdfkit widthOfString) instead of an approximation.
   const doc = new PDFDocument({
     size: [252, 165.6],
     margin: 0,
@@ -131,12 +129,7 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     pdfVersion: "1.7",
     autoFirstPage: true,
   });
-
-  // Register every loaded font under its base name (for measurement
-  // and drawing).
-  for (const f of loaded) {
-    doc.registerFont(f.name, f.data);
-  }
+  for (const f of loaded) doc.registerFont(f.name, f.data);
 
   const measurer: TextMeasurer = {
     widthOfString(text, fontName, fontSize) {
@@ -145,7 +138,6 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
         doc.fontSize(fontSize);
         return doc.widthOfString(text);
       } catch {
-        // Fall back to an approximation if the font isn't registered.
         return widthOf(text, fontName, fontSize);
       }
     },
@@ -164,11 +156,57 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
     measurer,
   );
 
+  return { candidate, autoFonts, fontNames, fontMap, cell };
+}
+
+export interface UdsFitResult {
+  fits: boolean;
+  font: string;
+  fontSize: number;
+  cols: number;
+  rows: number;
+  cellsCount: number;
+  mode: UdsMode;
+}
+
+/**
+ * Check whether the requested layout (esp. manual mode) fits without
+ * truncating text. Does NOT render a PDF — used for live validation.
+ */
+export async function checkUdsLabelFit(input: UdsPdfInput): Promise<UdsFitResult> {
+  const { candidate, autoFonts, fontNames } = await solveLayout(input);
+  const fits = candidate !== null;
+  const font = candidate?.font ?? autoFonts[0] ?? fontNames[0] ?? "Helvetica";
+  const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
+  const cols = candidate?.cols ?? 4;
+  const rows = candidate?.rows ?? 4;
+  return {
+    fits,
+    font,
+    fontSize,
+    cols,
+    rows,
+    cellsCount: cols * rows,
+    mode: input.mode,
+  };
+}
+
+/**
+ * Render a UDS label PDF. Returns a Promise resolving to the pdfkit
+ * buffer + the chosen layout metadata (for the X-UDS-* headers).
+ */
+export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResult> {
+  const { candidate, autoFonts, fontNames, fontMap, cell } = await solveLayout(input);
+
   // Fallback: if nothing fits, use a candidate font at a readable size.
   const font = candidate?.font ?? autoFonts[0] ?? fontNames[0] ?? "Helvetica";
   const fontSize = candidate?.fontSize ?? DEFAULT_FONT_SIZE;
   const cols = candidate?.cols ?? 4;
   const rows = candidate?.rows ?? 4;
+
+  // Manual mode must fit without truncation. If the solver could not find
+  // a fitting layout, the combination is invalid (fits=false).
+  const fits = candidate !== null;
 
   // Final lines to render (4-6). If the solver found nothing, build
   // a best-effort layout from the raw cell (nama+kekuatan combined).
@@ -176,6 +214,18 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
   if (fitted.length === 0) {
     const combined = [cell.nama, cell.kekuatan].filter(Boolean).join(" ");
     fitted = [combined, cell.kelompok, cell.luput].filter((l) => l.length > 0);
+  }
+
+  const doc = new PDFDocument({
+    size: [252, 165.6],
+    margin: 0,
+    compress: false,
+    pdfVersion: "1.7",
+    autoFirstPage: true,
+  });
+
+  for (const f of fontMap) {
+    doc.registerFont(f[0], f[1]);
   }
 
   const chunks: Buffer[] = [];
@@ -213,6 +263,7 @@ export async function renderUdsLabelPdf(input: UdsPdfInput): Promise<UdsPdfResul
         rows,
         cellsCount: cols * rows,
         mode: input.mode,
+        fits,
       });
     });
     doc.on("error", reject);

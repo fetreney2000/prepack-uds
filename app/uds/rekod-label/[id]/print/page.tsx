@@ -2,7 +2,7 @@
 // live PDF preview, then print.
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageShell } from "@/components/page-shell";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Printer, ArrowLeft } from "lucide-react";
+import { AlertCircle, Loader2, Printer, ArrowLeft } from "lucide-react";
 import {
   MANUAL_MIN_COLS,
   MANUAL_MAX_COLS,
@@ -45,6 +45,8 @@ function onChangeString(set: (v: string) => void) {
   return (v: string | null) => set(v ?? "");
 }
 
+type FitStatus = "checking" | "fit" | "unfit";
+
 export default function UdsLabelPrintPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -56,6 +58,7 @@ export default function UdsLabelPrintPage() {
   const [fontSize, setFontSize] = useState<string>("5.0");
   const [rows, setRows] = useState<string>("5");
   const [cols, setCols] = useState<string>("5");
+  const [fitStatus, setFitStatus] = useState<FitStatus>("fit");
 
   // Build the API URL. The iframe src changes on every option change,
   // which triggers a fresh fetch → live preview.
@@ -69,6 +72,36 @@ export default function UdsLabelPrintPage() {
     }
     return `/api/uds/${encodeURIComponent(id)}/label.pdf?${q.toString()}`;
   }, [id, mode, font, fontSize, rows, cols]);
+
+  // Check URL — appends check=1 to get fit metadata as JSON (no PDF).
+  const checkUrl = useMemo(() => `${pdfUrl}&check=1`, [pdfUrl]);
+
+  // Live fit validation: for manual mode, ask the server whether the
+  // chosen font/size/grid can fit all text without truncation.
+  useEffect(() => {
+    if (!id || mode !== "manual") {
+      setFitStatus("fit");
+      return;
+    }
+    let cancelled = false;
+    setFitStatus("checking");
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(checkUrl);
+        if (cancelled) return;
+        const body = (await res.json()) as { fits?: boolean };
+        setFitStatus(body?.fits ? "fit" : "unfit");
+      } catch {
+        if (!cancelled) setFitStatus("fit");
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [checkUrl, id, mode]);
+
+  const blockPrint = !id || (mode === "manual" && fitStatus === "unfit");
 
   const handlePrint = () => {
     const win = iframeRef.current?.contentWindow;
@@ -95,7 +128,7 @@ export default function UdsLabelPrintPage() {
           </Button>
           <h1 className="text-2xl font-semibold">Cetak Label UDS</h1>
         </div>
-        <Button onClick={handlePrint} disabled={!id}>
+        <Button onClick={handlePrint} disabled={blockPrint}>
           <Printer className="h-4 w-4" />
           Cetak
         </Button>
@@ -201,6 +234,18 @@ export default function UdsLabelPrintPage() {
             {!id ? (
               <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
                 ID tidak sah.
+              </div>
+            ) : mode === "manual" && fitStatus === "unfit" ? (
+              <div className="flex h-72 flex-col items-center justify-center gap-3 p-6 text-center">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+                <p className="text-sm font-medium text-destructive">
+                  Gabungan tidak sesuai.
+                </p>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  Saiz fon dan grid yang dipilih tidak cukup untuk memuatkan
+                  semua teks tanpa pemotongan. Kurangkan saiz fon, tambah saiz
+                  grid, atau tukar font.
+                </p>
               </div>
             ) : (
               <iframe

@@ -58,7 +58,6 @@ export const INNER_BORDER_OFFSET_PT = 0.6;
 export const AVAILABLE_FONTS = [
   "Bell Centennial",
   "Inter",
-  "Inter-Medium",
   "Roboto",
 ] as const;
 
