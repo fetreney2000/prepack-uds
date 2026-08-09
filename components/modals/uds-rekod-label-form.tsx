@@ -32,8 +32,9 @@ import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parse } from "date-fns";
 import { useUdsUbatList, type UdsUbat } from "@/lib/queries";
 import { createUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
+import { todayInKl } from "@/lib/format";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = todayInKl;
 
 interface Props {
   open: boolean;
@@ -162,6 +163,7 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
             <Label>Nama Ubat</Label>
             <Combobox
               items={items}
+              itemToStringLabel={(m) => m.Nama}
               itemToStringValue={(m) => m.Nama}
               value={ubo}
               onValueChange={(m) => {
@@ -193,7 +195,7 @@ export function UdsRekodLabelForm({ open, onOpenChange }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="uds-kekuatan">Kekuatan</Label>
-              <Input id="uds-kekuatan" value={form.Kekuatan} onChange={set("Kekuatan")} />
+              <Input id="uds-kekuatan" value={form.Kekuatan} readOnly />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="uds-kelompok">Kelompok</Label>

@@ -4,6 +4,8 @@
 // Pure functions + transactional wrapper.
 // ============================================================
 
+import { currentYearInKl } from "@/lib/format";
+
 /**
  * Pad a number to a fixed width with leading zeros.
  */
@@ -20,7 +22,7 @@ export function extractYearFromTarikh(tarikh?: string | null): number {
     const y = parseInt(tarikh.slice(0, 4), 10);
     if (!Number.isNaN(y) && y > 0) return y;
   }
-  return new Date().getFullYear();
+  return currentYearInKl();
 }
 
 /**

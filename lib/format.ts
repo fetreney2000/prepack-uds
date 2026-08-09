@@ -1,6 +1,32 @@
 // Date formatting helpers (locale-independent dd/mm/yyyy + Malay months)
 import { format, parse } from "date-fns";
 
+// The system is used in Kuala Lumpur, Malaysia — always resolve wall-clock
+// dates in Asia/Kuala_Lumpur (UTC+8) regardless of the runtime/OS timezone.
+export const KL_TIME_ZONE = "Asia/Kuala_Lumpur";
+
+/**
+ * Current date in Kuala Lumpur as ISO 'YYYY-MM-DD' (local KL wall-clock).
+ * Timezone-independent: uses Intl with the explicit KL timezone.
+ */
+export function todayInKl(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: KL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/**
+ * Current year in Kuala Lumpur. Timezone-independent (KL wall-clock).
+ */
+export function currentYearInKl(): number {
+  return Number(todayInKl().slice(0, 4));
+}
+
 export const MALAY_MONTHS = [
   "Januari",
   "Februari",
