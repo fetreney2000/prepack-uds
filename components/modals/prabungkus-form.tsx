@@ -165,7 +165,7 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>Tambah Rekod Prabungkus</DialogTitle>
           <DialogDescription>
@@ -174,21 +174,36 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+        <div className="space-y-2.5 overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
               <Label htmlFor="pp-tarikh">Tarikh</Label>
               <Input id="pp-tarikh" type="date" value={form.tarikh} onChange={set("tarikh")} />
             </div>
-            <div className="space-y-1.5">
-              <Label>ID Prabungkus (Pratonton)</Label>
+            <div className="space-y-1">
+              <Label>ID Prabungkus</Label>
               <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
                 {preview ?? "—"}
               </div>
             </div>
+            <div className="space-y-1">
+              <Label>Kategori</Label>
+              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
+                {ubo?.kategoriUbat ?? "—"}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="pp-nama-dagangan">Nama Dagangan</Label>
+              <Input
+                id="pp-nama-dagangan"
+                value={form.namaDagangan}
+                onChange={set("namaDagangan")}
+                readOnly
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label>Nama Ubat</Label>
             <Combobox
               items={items}
@@ -224,41 +239,8 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
             </Combobox>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Kategori</Label>
-              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
-                {ubo?.kategoriUbat ?? "—"}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pp-nama-dagangan">Nama Dagangan</Label>
-              <Input
-                id="pp-nama-dagangan"
-                value={form.namaDagangan}
-                onChange={set("namaDagangan")}
-                readOnly
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Pengilang</Label>
-              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
-                {ubo?.pengilang ?? "—"}
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Nombor MAL</Label>
-              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
-                {ubo?.nomborMAL ?? "—"}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
               <Label htmlFor="pp-kelompok">Nombor Kelompok</Label>
               <Input
                 id="pp-kelompok"
@@ -266,7 +248,7 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
                 onChange={set("nomborKelompok")}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label htmlFor="pp-luput-asal">Tarikh Luput Asal</Label>
               <Input
                 id="pp-luput-asal"
@@ -275,17 +257,14 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
                 onChange={set("tarikhLuputAsal")}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label>Tarikh Luput Baharu</Label>
               <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
                 {formatDate(tarikhLuputBaharu) || "—"}
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pp-kuantiti">Kuantiti Untuk Diprabungkus</Label>
+            <div className="space-y-1">
+              <Label htmlFor="pp-kuantiti">Kuantiti</Label>
               <Input
                 id="pp-kuantiti"
                 type="number"
@@ -296,8 +275,20 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label>Pengilang</Label>
+              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
+                {ubo?.pengilang ?? "—"}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Nombor MAL</Label>
+              <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
+                {ubo?.nomborMAL ?? "—"}
+              </div>
+            </div>
+            <div className="space-y-1">
               <Label htmlFor="pp-saiz-pek">Saiz Pek</Label>
               <Input
                 id="pp-saiz-pek"
@@ -307,8 +298,8 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
                 onChange={set("saizPek")}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pp-harga">Harga Setiap Pek (RM)</Label>
+            <div className="space-y-1">
+              <Label htmlFor="pp-harga">Harga / Pek (RM)</Label>
               <Input
                 id="pp-harga"
                 type="number"
@@ -320,31 +311,30 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Jumlah Pek Dihasilkan</Label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label>Jumlah Pek</Label>
               <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
                 {jumlahPekDihasilkan ?? "—"}
               </div>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <Label>Baki</Label>
               <div className="flex h-9 items-center rounded-md border border-dashed px-2.5 text-sm text-muted-foreground">
                 {baki ?? "—"}
               </div>
             </div>
+            <div className="col-span-2 space-y-1">
+              <Label htmlFor="pp-deskripsi">Deskripsi Pek</Label>
+              <Input
+                id="pp-deskripsi"
+                value={form.deskripsiPek}
+                onChange={set("deskripsiPek")}
+              />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="pp-deskripsi">Deskripsi Pek</Label>
-            <Input
-              id="pp-deskripsi"
-              value={form.deskripsiPek}
-              onChange={set("deskripsiPek")}
-            />
-          </div>
-
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label htmlFor="pp-arahan">Arahan Tambahan</Label>
             <Input
               id="pp-arahan"
