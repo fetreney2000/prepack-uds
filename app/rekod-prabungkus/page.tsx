@@ -1,7 +1,7 @@
-// Rekod Prabungkus — searchable/sortable/paginated list (read-only, Phase 1)
+// Rekod Prabungkus — searchable/sortable/paginated list
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
@@ -9,6 +9,7 @@ import { usePrabungkusList, type PrabungkusRecord } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PrabungkusForm } from "@/components/modals/prabungkus-form";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { ArrowUpDown, FileText, MoreHorizontal, Printer } from "lucide-react";
+import { ArrowUpDown, FileText, MoreHorizontal, Plus, Printer } from "lucide-react";
 
 /** Trigger a download of the worksheet or label DOCX (download-only). */
 function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord) {
@@ -36,6 +37,7 @@ function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord)
 
 export default function RekodPrabungkusPage() {
   const { data, isLoading, isError, error } = usePrabungkusList();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<PrabungkusRecord>[]>(
     () => [
@@ -115,6 +117,10 @@ export default function RekodPrabungkusPage() {
     <PageShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Rekod Prabungkus</h1>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Tambah Rekod
+        </Button>
       </div>
 
       {isError && (
@@ -135,6 +141,8 @@ export default function RekodPrabungkusPage() {
           searchPlaceholder="Cari nama ubat, ID, atau deskripsi..."
         />
       )}
+
+      <PrabungkusForm open={createOpen} onOpenChange={setCreateOpen} />
     </PageShell>
   );
 }
