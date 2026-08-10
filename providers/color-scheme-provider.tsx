@@ -4,7 +4,7 @@
 // original's localStorage preload + server fetch on load).
 //
 // Dark-mode aware: when the resolved theme is "dark", it applies the
-// design-system dark palette (Bold Wikipedia dark) instead of the active
+// design-system dark palette (Rose Pine dark) instead of the active
 // scheme's light palette. All built-in schemes are light palettes.
 //
 // Critical: light scheme vars are applied as inline styles on :root, which
