@@ -165,7 +165,7 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]">
+      <DialogContent className="sm:max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col">
         <DialogHeader>
           <DialogTitle>Tambah Rekod Prabungkus</DialogTitle>
           <DialogDescription>
@@ -174,7 +174,7 @@ export function PrabungkusForm({ open, onOpenChange }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2.5 overflow-y-auto pr-1">
+        <div className="flex-1 min-h-0 space-y-2.5 overflow-y-auto pr-1">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="space-y-1">
               <Label htmlFor="pp-tarikh">Tarikh</Label>

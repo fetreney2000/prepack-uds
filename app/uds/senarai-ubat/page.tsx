@@ -1,16 +1,20 @@
-// UDS Senarai Ubat — searchable/sortable/paginated UDS med list (read-only, Phase 1)
+// UDS Senarai Ubat — searchable/sortable/paginated UDS med list
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
 import { useUdsUbatList, type UdsUbat } from "@/lib/queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { UdsUbatForm } from "@/components/modals/uds-ubat-form";
+import { Plus } from "lucide-react";
 
 export default function UdsSenaraiUbatPage() {
   const { data, isLoading, isError, error } = useUdsUbatList();
+  const [createOpen, setCreateOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<UdsUbat>[]>(
     () => [
@@ -33,6 +37,10 @@ export default function UdsSenaraiUbatPage() {
     <PageShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Ubat UDS</h1>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Tambah Ubat
+        </Button>
       </div>
 
       {isError && (
@@ -49,6 +57,8 @@ export default function UdsSenaraiUbatPage() {
       ) : (
         <DataTable columns={columns} data={data ?? []} searchPlaceholder="Cari nama ubat..." />
       )}
+
+      <UdsUbatForm open={createOpen} onOpenChange={setCreateOpen} />
     </PageShell>
   );
 }
