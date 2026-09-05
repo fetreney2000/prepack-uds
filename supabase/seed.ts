@@ -99,15 +99,15 @@ async function main() {
   // 1. Ensure admin password (default farmasi456)
   const { data: existing } = await admin
     .from("tblsystemsettings")
-    .select("settingKey")
-    .eq("settingKey", "admin_password")
+    .select("settingkey")
+    .eq("settingkey", "admin_password")
     .maybeSingle();
 
   if (!existing) {
     const hash = hashPassword("farmasi456");
     const { error } = await admin
       .from("tblsystemsettings")
-      .upsert({ settingKey: "admin_password", settingValue: hash });
+      .upsert({ settingkey: "admin_password", settingvalue: hash });
     if (error) {
       console.error("Failed to set admin password:", error.message);
     } else {
@@ -153,7 +153,7 @@ async function main() {
         const key = `running_number_${year}`;
         const { error } = await admin
           .from("tblsystemsettings")
-          .upsert({ settingKey: key, settingValue: String(max + 1) });
+          .upsert({ settingkey: key, settingvalue: String(max + 1) });
         if (error) {
           console.error(`  Running number for ${year} FAILED: ${error.message}`);
         } else {
@@ -198,7 +198,7 @@ async function main() {
         const key = `running_number_uds_${year}`;
         const { error } = await admin
           .from("tblsystemsettings")
-          .upsert({ settingKey: key, settingValue: String(max + 1) });
+          .upsert({ settingkey: key, settingvalue: String(max + 1) });
         if (error) {
           console.error(`  UDS running number for ${year} FAILED: ${error.message}`);
         } else {

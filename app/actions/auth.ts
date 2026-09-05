@@ -59,7 +59,7 @@ export async function verifyAdminPassword(password: string): Promise<AuthResult>
   const { data, error } = await supabase
     .from("tblsystemsettings")
     .select("settingvalue")
-    .eq("settingKey", "admin_password")
+    .eq("settingkey", "admin_password")
     .maybeSingle();
 
   const valid = !error && !!data && verifyPassword(parsed.data.password, data.settingvalue);
@@ -87,7 +87,7 @@ export async function changeAdminPassword(
   const { data, error } = await supabase
     .from("tblsystemsettings")
     .select("settingvalue")
-    .eq("settingKey", "admin_password")
+    .eq("settingkey", "admin_password")
     .maybeSingle();
 
   if (error || !data) {
@@ -100,7 +100,7 @@ export async function changeAdminPassword(
   const { error: updErr } = await supabase
     .from("tblsystemsettings")
     .update({ settingvalue: hashPassword(parsed.data.next) })
-    .eq("settingKey", "admin_password");
+    .eq("settingkey", "admin_password");
 
   if (updErr) {
     return { ok: false, message: `Gagal menukar kata laluan: ${updErr.message}` };
