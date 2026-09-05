@@ -12,7 +12,6 @@ export type ModalName =
   | "settings"
   | "passwordPrompt"
   | "changePassword"
-  | "addColorScheme"
   | "udsRekodCreate"
   | "udsRekodEdit"
   | "udsPrint"

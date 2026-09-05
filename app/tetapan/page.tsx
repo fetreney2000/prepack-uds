@@ -1,9 +1,9 @@
 // Tetapan — admin settings page (password-gated, Phase 4)
-// Categories, units, label/worksheet types, color schemes, year-scoped
-// running numbers, and password change. Matches §4.11 of the analysis.
+// Categories, units, label/worksheet types, year-scoped running numbers,
+// and password change. Matches §4.11 of the analysis.
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,13 +31,8 @@ import {
   updateWorksheetType,
   deleteWorksheetType,
   updateRunningNumber,
-  setActiveColorScheme,
-  createCustomColorScheme,
-  deleteCustomColorScheme,
 } from "@/app/actions/settings";
 import { verifyAdminPassword, changeAdminPassword } from "@/app/actions/auth";
-import { BUILT_IN_SCHEMES, findBuiltInScheme, deriveCssVars } from "@/lib/color-schemes";
-import { useColorSchemeStore } from "@/stores/color-scheme-store";
 import {
   Lock,
   Plus,
@@ -45,7 +40,6 @@ import {
   Trash2,
   ShieldCheck,
   KeyRound,
-  Palette,
   Tag,
   Boxes,
   FileText,
@@ -70,14 +64,6 @@ interface TemplateRow {
 }
 
 type LookupTable = "tblKategoriUbat" | "tblUnitSKU" | "tblUnitPKU";
-
-interface CustomSchemeRow {
-  ID: number;
-  schemeId: string;
-  name: string;
-  colors: string;
-  css: string;
-}
 
 // ---------- Data fetching ----------
 
@@ -112,33 +98,6 @@ function useLookups() {
   });
 }
 
-function useColorSchemeData() {
-  return useQuery({
-    queryKey: ["tetapan-colorschemes"],
-    queryFn: async () => {
-      const supabase = createClient();
-      const [customRes, activeRes] = await Promise.all([
-        supabase.from("tblcolorschemes").select("*").order("ID", { ascending: true }),
-        supabase
-          .from("tblsystemsettings")
-          .select("settingvalue")
-          .eq("settingkey", "color_scheme")
-          .maybeSingle(),
-      ]);
-      const custom = ((customRes.data ?? []) as CustomSchemeRow[]).map((r) => ({
-        ID: r.ID,
-        schemeId: r.schemeId,
-        name: r.name,
-        colors: JSON.parse(r.colors || "[]") as string[],
-      }));
-      return {
-        custom,
-        active: (activeRes.data as { settingvalue?: string } | null)?.settingvalue ?? "light",
-      };
-    },
-  });
-}
-
 // ---------- Page ----------
 
 export default function TetapanPage() {
@@ -148,16 +107,12 @@ export default function TetapanPage() {
   const [passwordError, setPasswordError] = useState("");
 
   const { data: lookups, refetch: refetchLookups } = useLookups();
-  const { data: schemeData, refetch: refetchSchemes } = useColorSchemeData();
   const queryClient = useQueryClient();
-
-  const applyScheme = useColorSchemeStore((s) => s.applyScheme);
 
   const refresh = useCallback(() => {
     refetchLookups();
-    refetchSchemes();
     queryClient.invalidateQueries({ queryKey: ["tetapan"] });
-  }, [refetchLookups, refetchSchemes, queryClient]);
+  }, [refetchLookups, queryClient]);
 
   const handleVerify = async () => {
     const res = await verifyAdminPassword(password);
@@ -254,13 +209,6 @@ export default function TetapanPage() {
             kind="worksheet"
           />
           <RunningNumberCard onSaved={refresh} />
-          <ColorSchemeCard
-            active={schemeData?.active}
-            custom={schemeData?.custom}
-            loading={!schemeData}
-            onSaved={refresh}
-            applyScheme={applyScheme}
-          />
           <ChangePasswordCard />
         </div>
       )}
@@ -837,189 +785,6 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
         </div>
         <Button onClick={handleSave}>Simpan</Button>
       </CardContent>
-    </Card>
-  );
-}
-
-// ---------- Color schemes ----------
-
-function ColorSchemeCard({
-  active,
-  custom,
-  loading,
-  onSaved,
-  applyScheme,
-}: {
-  active?: string;
-  custom?: { ID: number; schemeId: string; name: string; colors: string[] }[];
-  loading: boolean;
-  onSaved: () => void;
-  applyScheme: (vars: Record<string, string>) => void;
-}) {
-  const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [colors, setColors] = useState<string[]>(["", "", "", "", ""]);
-  const [saving, setSaving] = useState(false);
-
-  const allSchemes = useMemo(() => {
-    const built = BUILT_IN_SCHEMES.map((s) => ({ ID: null, ...s }));
-    return [...built, ...(custom ?? [])];
-  }, [custom]);
-
-  const handleSelect = async (schemeId: string) => {
-    const res = await setActiveColorScheme(schemeId);
-    if (res.ok) {
-      const built = findBuiltInScheme(schemeId);
-      const customScheme = custom?.find((c) => c.schemeId === schemeId);
-      if (built) {
-        applyScheme(built.css as Record<string, string>);
-      } else if (customScheme) {
-        applyScheme(deriveCssVars(customScheme.colors));
-      }
-      toast.success("Skema warna diguna.");
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal set skema.");
-    }
-  };
-
-  const handleCreate = async () => {
-    if (colors.some((c) => !/^#[0-9a-fA-F]{6}$/.test(c))) {
-      toast.error("Semua 5 warna mestilah dalam format #RRGGBB.");
-      return;
-    }
-    setSaving(true);
-    const res = await createCustomColorScheme({ name, colors });
-    setSaving(false);
-    if (res.ok) {
-      toast.success("Skema warna dibuat.");
-      setCreateOpen(false);
-      setName("");
-      setColors(["", "", "", "", ""]);
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal mencipta skema.");
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Padam skema warna ini?")) return;
-    const res = await deleteCustomColorScheme(id);
-    if (res.ok) {
-      if (res.data?.resetToLight) {
-        applyScheme(BUILT_IN_SCHEMES[0].css);
-      }
-      toast.success("Skema dipadam.");
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal memadam skema.");
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Palette className="size-4 text-muted-foreground" />
-            <CardTitle>Skema Warna</CardTitle>
-          </div>
-          <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-3 mr-1" /> Skema Baharu
-          </Button>
-        </div>
-        <CardDescription>Pilih skema warna untuk aplikasi.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : (
-          <div className="grid gap-2">
-            {allSchemes.map((s) => {
-              const isActive = s.schemeId === active;
-              return (
-                <div
-                  key={s.ID ?? s.schemeId}
-                  className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
-                    isActive ? "border-ring bg-muted/50" : "border-border"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-1">
-                      {(s.colors.length ? s.colors : ["#ccc", "#ccc", "#ccc", "#ccc", "#ccc"]).map(
-                        (c, i) => (
-                          <span
-                            key={i}
-                            className="size-4 rounded-full border border-white dark:border-black"
-                            style={{ background: c }}
-                          />
-                        ),
-                      )}
-                    </div>
-                    <span className="font-medium">{s.name}</span>
-                    {isActive && <Badge variant="secondary">Aktif</Badge>}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {s.ID != null && (
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        onClick={() => handleDelete(s.ID as number)}
-                      >
-                        <Trash2 className="size-3 text-destructive" />
-                      </Button>
-                    )}
-                    {!isActive && (
-                      <Button size="sm" variant="outline" onClick={() => handleSelect(s.schemeId)}>
-                        Guna
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Skema Warna Baharu</DialogTitle>
-            <DialogDescription>Masukkan nama dan 5 warna (#RRGGBB).</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="scheme-name">Nama</Label>
-              <Input
-                id="scheme-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {colors.map((c, i) => (
-                <div key={i} className="space-y-1">
-                  <Label htmlFor={`color-${i}`} className="text-xs">#{i + 1}</Label>
-                  <Input
-                    id={`color-${i}`}
-                    value={c}
-                    onChange={(e) =>
-                      setColors((arr) => arr.map((v, j) => (j === i ? e.target.value : v)))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Batal</Button>
-            <Button onClick={handleCreate} disabled={saving}>
-              {saving ? "Menyimpan..." : "Cipta"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }
