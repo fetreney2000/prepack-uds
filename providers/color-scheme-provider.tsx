@@ -4,11 +4,11 @@
 // original's localStorage preload + server fetch on load).
 //
 // Dark-mode aware: when the resolved theme is "dark", it applies the
-// design-system dark palette (Rose Pine dark) instead of the active
-// scheme's light palette. All built-in schemes are light palettes.
+// design-system dark palette (Rose Pine dark) instead of the active scheme's
+// palette. The active scheme (light or dark) is applied only in light mode.
 //
-// Critical: light scheme vars are applied as inline styles on :root, which
-// would override the `.dark` class. So we NEVER apply a light scheme's vars
+// Critical: scheme vars are applied as inline styles on :root, which would
+// override the `.dark` class. So we NEVER apply the active scheme's vars
 // while dark mode is active — dark mode always uses the dark palette.
 "use client";
 

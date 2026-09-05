@@ -2,16 +2,69 @@
 // The default scheme matches the Rose Pine tweakcn theme in app/globals.css.
 import type { ColorSchemeDefinition } from "@/stores/color-scheme-store";
 
-const lightForeground = "#575279";
 const sansFont = "var(--font-geist), Geist, sans-serif";
 const monoFont = "var(--font-geist-mono), 'Geist Mono', monospace";
 
+// ---------- color contrast helpers ----------
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "").trim();
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const num = parseInt(full.slice(0, 6), 16);
+  if (Number.isNaN(num)) return [0, 0, 0];
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function isDarkColor(hex: string): boolean {
+  return relativeLuminance(hex) < 0.5;
+}
+
+/** WCAG contrast ratio between two colors. */
+function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const hi = Math.max(la, lb);
+  const lo = Math.min(la, lb);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const FOREGROUND_LIGHT = "#f8fafc";
+const FOREGROUND_DARK = "#1f2937";
+
 /**
- * Derive the full CSS variable set from a scheme's 5 colors:
+ * Pick the foreground (light or dark) with the higher contrast against the
+ * given background — handles mid-tone surfaces (e.g. gold, orange, cyan
+ * primaries) where a fixed light/dark choice would be unreadable.
+ */
+function contrastForeground(bg: string): string {
+  return contrastRatio(bg, FOREGROUND_LIGHT) >= contrastRatio(bg, FOREGROUND_DARK)
+    ? FOREGROUND_LIGHT
+    : FOREGROUND_DARK;
+}
+
+/** A muted/secondary text color for the given background color. */
+function mutedForeground(bg: string): string {
+  return isDarkColor(bg) ? "#94a3b8" : "#64748b";
+}
+
+/**
+ * Derive a full, self-consistent CSS variable set from a scheme's 5 colors:
  *   colors[0] background, colors[1] surface-alt, colors[2] accent,
- *   colors[3] primary, colors[4] text-primary/highlight.
- * Mirrors the Rose Pine token set (radius, shadows, letter-spacing, chart,
- * font, and sidebar tokens) so every scheme shares the design system.
+ *   colors[3] primary, colors[4] highlight.
+ *
+ * Foreground/contrast colors are derived from each surface's luminance so
+ * every palette is readable regardless of whether its background is light
+ * or dark (the built-in set mixes both). Mirrors the Rose Pine token set
+ * (radius, shadows, letter-spacing, chart, font, and sidebar tokens) so every
+ * scheme shares the design system.
  */
 export function deriveCssVars(colors: string[]): Record<string, string> {
   const [bg, surface, accent, primary, highlight] = [
@@ -21,28 +74,37 @@ export function deriveCssVars(colors: string[]): Record<string, string> {
     colors[3] ?? "#18181b",
     colors[4] ?? "#52525b",
   ];
+
+  const foreground = contrastForeground(bg);
+  const onSurface = contrastForeground(surface);
+  const onAccent = contrastForeground(accent);
+  const onPrimary = contrastForeground(primary);
+  const muted = mutedForeground(bg);
+  const destructive = isDarkColor(bg) ? "#eb6f92" : "#dc2626";
+  const onDestructive = contrastForeground(destructive);
+
   return {
     "--background": bg,
-    "--foreground": lightForeground,
+    "--foreground": foreground,
     "--primary": primary,
-    "--primary-foreground": "#ffffff",
+    "--primary-foreground": onPrimary,
     "--accent": accent,
-    "--accent-foreground": lightForeground,
+    "--accent-foreground": onAccent,
     "--surface-alt": surface,
-    "--text-primary": highlight,
-    "--text-secondary": highlight,
+    "--text-primary": foreground,
+    "--text-secondary": muted,
     "--border": accent,
     "--ring": primary,
     "--card": surface,
-    "--card-foreground": lightForeground,
+    "--card-foreground": onSurface,
     "--popover": surface,
-    "--popover-foreground": lightForeground,
+    "--popover-foreground": onSurface,
     "--secondary": surface,
-    "--secondary-foreground": lightForeground,
+    "--secondary-foreground": onSurface,
     "--muted": surface,
-    "--muted-foreground": highlight,
-    "--destructive": "#d33",
-    "--destructive-foreground": "#ffffff",
+    "--muted-foreground": muted,
+    "--destructive": destructive,
+    "--destructive-foreground": onDestructive,
     "--input": accent,
     "--chart-1": primary,
     "--chart-2": accent,
@@ -50,11 +112,11 @@ export function deriveCssVars(colors: string[]): Record<string, string> {
     "--chart-4": "#8b5cf6",
     "--chart-5": "#ec4899",
     "--sidebar": bg,
-    "--sidebar-foreground": highlight,
+    "--sidebar-foreground": foreground,
     "--sidebar-primary": primary,
-    "--sidebar-primary-foreground": "#ffffff",
+    "--sidebar-primary-foreground": onPrimary,
     "--sidebar-accent": surface,
-    "--sidebar-accent-foreground": highlight,
+    "--sidebar-accent-foreground": onSurface,
     "--sidebar-border": accent,
     "--sidebar-ring": primary,
     "--radius": "0rem",
@@ -152,8 +214,8 @@ export function findBuiltInScheme(schemeId: string): ColorSchemeDefinition | und
 
 /**
  * Rose Pine dark-theme CSS variables. Applied to `:root` when dark mode is
- * active. All built-in color schemes are light palettes, so dark mode always
- * uses this single design-system palette.
+ * active. Dark mode always uses this single design-system palette regardless
+ * of the active color scheme (which may be a light or dark palette).
  */
 export const DARK_SCHEME_CSS: Record<string, string> = {
   "--background": "#191724",

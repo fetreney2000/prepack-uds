@@ -73,8 +73,8 @@ export const useColorSchemeStore = create<ColorSchemeState>((set) => ({
     set({ cssVars: vars });
   },
 
-  // Dark mode is always the design-system dark palette (all built-in
-  // schemes are light palettes).
+  // Dark mode is always the design-system dark palette (independent of the
+  // active color scheme, which may be a light or dark palette).
   applyDark: (vars = DARK_SCHEME_CSS) => {
     applyToRoot(vars);
     set({ cssVars: vars });

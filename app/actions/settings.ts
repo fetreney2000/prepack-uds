@@ -262,7 +262,7 @@ export async function listCustomColorSchemes(): Promise<ActionResult<ColorScheme
     .order("ID", { ascending: true });
   if (error) return { ok: false, error: error.message };
   const schemes: ColorSchemeDefinition[] = (data ?? []).map((r) => ({
-    schemeId: (r as { schemeId: string }).schemeId,
+    schemeId: (r as { schemeid: string }).schemeid,
     name: (r as { name: string }).name,
     colors: JSON.parse((r as { colors: string }).colors || "[]") as string[],
     css: JSON.parse((r as { css: string }).css || "{}") as Record<string, string>,
@@ -289,20 +289,20 @@ export async function createCustomColorScheme(input: {
   const supabase = createAdminClient();
 
   // Duplicate schemeId check (built-in or custom).
-  const { data: clash } = await supabase
+  const { data: clash, error: clashErr } = await supabase
     .from("tblcolorschemes")
-    .select("schemeId")
-    .eq("schemeId", schemeId)
+    .select("schemeid")
+    .eq("schemeid", schemeId)
     .maybeSingle();
-  if (clash) return { ok: false, error: `Skema warna '${schemeId}' sudah wujud.` };
+  if (clashErr || clash) return { ok: false, error: `Skema warna '${schemeId}' sudah wujud.` };
 
   const css = deriveCssVars(input.colors);
   const row = {
-    schemeId,
+    schemeid: schemeId,
     name,
     colors: JSON.stringify(input.colors),
     css: JSON.stringify(css),
-    isBuiltIn: 0,
+    isbuiltin: 0,
   };
   const { data: inserted, error } = await supabase
     .from("tblcolorschemes")
@@ -315,7 +315,7 @@ export async function createCustomColorScheme(input: {
   return {
     ok: true,
     data: {
-      schemeId: (inserted as { schemeId: string }).schemeId,
+      schemeId: (inserted as { schemeid: string }).schemeid,
       name: (inserted as { name: string }).name,
       colors: input.colors,
       css,
@@ -332,7 +332,7 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
 
   const { data: target } = await supabase
     .from("tblcolorschemes")
-    .select("schemeId")
+    .select("schemeid")
     .eq("ID", id)
     .maybeSingle();
 
@@ -340,9 +340,10 @@ export async function deleteCustomColorScheme(id: number): Promise<ActionResult<
   if (error) return { ok: false, error: error.message };
 
   let resetToLight = false;
-  if (target) {
+  const targetSchemeId = (target as { schemeid?: string } | null)?.schemeid;
+  if (targetSchemeId) {
     const active = await getActiveColorScheme();
-    if (active.ok && active.data === target.schemeId) {
+    if (active.ok && active.data === targetSchemeId) {
       await supabase
         .from("tblsystemsettings")
         .upsert(
