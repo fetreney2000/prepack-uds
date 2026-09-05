@@ -333,7 +333,11 @@ export function PrabungkusForm({
               ) : (
                 <Combobox
                   items={items}
-                  itemToStringLabel={(m) => m.namaUbat}
+                  itemToStringLabel={(m) =>
+                    m.deskripsiPrabungkus
+                      ? `${m.namaUbat} — ${m.deskripsiPrabungkus}`
+                      : m.namaUbat
+                  }
                   itemToStringValue={(m) => m.namaUbat}
                   value={ubo}
                   onValueChange={(m) => {
@@ -358,12 +362,14 @@ export function PrabungkusForm({
                     <ComboboxList>
                       {(m) => (
                         <ComboboxItem key={m.ID} value={m}>
-                          {m.namaUbat}
-                          {m.namaDagangan && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {m.namaDagangan}
-                            </span>
-                          )}
+                          <span>
+                            {m.namaUbat}
+                            {m.deskripsiPrabungkus && (
+                              <span className="ml-1.5 text-xs text-muted-foreground">
+                                — {m.deskripsiPrabungkus}
+                              </span>
+                            )}
+                          </span>
                         </ComboboxItem>
                       )}
                     </ComboboxList>
