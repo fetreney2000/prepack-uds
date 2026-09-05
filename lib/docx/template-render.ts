@@ -78,27 +78,41 @@ export interface TemplateData {
 export const DEFAULT_WORKSHEET_TEMPLATE = "Kertas Kerja - Umum.docx";
 export const DEFAULT_LABEL_TEMPLATE = "Tablet - Nama - Sebelum - Saiz L.docx";
 
-/** Merge fields exposed by buildTemplateData — used for upload warnings. */
-export const KNOWN_MERGE_FIELDS: string[] = [
-  "id",
-  "idPrabungkus",
-  "saizPekFormatted",
-  "tarikh",
-  "tarikhLuputAsal",
-  "tarikhLuputBaharu",
-  "hargaSetiapPek",
-  "namaUbat",
-  "namaDagangan",
-  "nomborKelompok",
-  "pengilang",
-  "nomborMAL",
-  "kuantitiUntukDiprabungkus",
-  "saizPek",
-  "deskripsiPek",
-  "jumlahPekDihasilkan",
-  "baki",
-  "arahanTambahan",
+/** A merge field exposed to templates, with a Malay label + description. */
+export interface TemplateField {
+  key: string;
+  label: string;
+  description: string;
+}
+
+/**
+ * All merge fields available to label/worksheet templates (Jinja-style
+ * `{{ field }}` placeholders, rendered by docxtemplater). Single source of
+ * truth used for both the Tetapan UI and upload validation.
+ */
+export const TEMPLATE_FIELDS: TemplateField[] = [
+  { key: "idPrabungkus", label: "ID Prabungkus", description: "No. rujukan prabungkus (cth: PP-0001/26-1)" },
+  { key: "namaUbat", label: "Nama Ubat", description: "Nama generik ubat" },
+  { key: "namaDagangan", label: "Nama Dagangan", description: "Nama jenama/dagangan ubat" },
+  { key: "nomborKelompok", label: "No. Kelompok", description: "Nombor kelompok (batch)" },
+  { key: "saizPek", label: "Saiz Pek", description: "Saiz pek (nombor)" },
+  { key: "saizPekFormatted", label: "Saiz Pek + Unit", description: "Saiz pek dengan unit SKU (cth: 30 TAB)" },
+  { key: "deskripsiPek", label: "Deskripsi Pek", description: "Deskripsi pek" },
+  { key: "kuantitiUntukDiprabungkus", label: "Kuantiti Diprabungkus", description: "Kuantiti untuk diprabungkus" },
+  { key: "jumlahPekDihasilkan", label: "Jumlah Pek", description: "Jumlah pek dihasilkan" },
+  { key: "baki", label: "Baki", description: "Baki lebihan selepas prabungkus" },
+  { key: "tarikh", label: "Tarikh", description: "Tarikh prabungkus (dd/mm/yyyy)" },
+  { key: "tarikhLuputAsal", label: "Tarikh Luput Asal", description: "Tarikh luput asal (dd/mm/yyyy)" },
+  { key: "tarikhLuputBaharu", label: "Tarikh Luput Baharu", description: "Tarikh luput baharu (dd/mm/yyyy)" },
+  { key: "hargaSetiapPek", label: "Harga Setiap Pek", description: "Harga setiap pek (2 titik perpuluhan)" },
+  { key: "pengilang", label: "Pengilang", description: "Nama pengilang" },
+  { key: "nomborMAL", label: "No. MAL", description: "Nombor pendaftaran MAL" },
+  { key: "arahanTambahan", label: "Arahan Tambahan", description: "Arahan tambahan ubat" },
+  { key: "id", label: "ID Rekod", description: "ID dalaman rekod (angka)" },
 ];
+
+/** Merge field keys — used for upload warnings. */
+export const KNOWN_MERGE_FIELDS: string[] = TEMPLATE_FIELDS.map((f) => f.key);
 
 /**
  * Compose the merge data for a worksheet/label template (§4.6).

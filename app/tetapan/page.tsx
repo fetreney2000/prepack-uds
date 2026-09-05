@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { TEMPLATE_FIELDS } from "@/lib/docx/template-render";
 import {
   createLookup,
   updateLookup,
@@ -623,6 +624,14 @@ function TemplateSection({
             )}
           </div>
         )}
+        <details className="mt-3 rounded-md border">
+          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-muted-foreground">
+            Senarai medan templat ({`{{ variable }}`})
+          </summary>
+          <div className="max-h-64 overflow-y-auto border-t p-2">
+            <TemplateFieldsPanel />
+          </div>
+        </details>
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -641,15 +650,27 @@ function TemplateSection({
               />
             </div>
             {!editing && (
-              <div className="space-y-1.5">
-                <Label htmlFor="tpl-file">Fail .docx</Label>
-                <Input
-                  id="tpl-file"
-                  type="file"
-                  accept=".docx"
-                  onChange={(e) => setCreateFile(e.target.files?.[0] ?? null)}
-                />
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tpl-file">Fail .docx</Label>
+                  <Input
+                    id="tpl-file"
+                    type="file"
+                    accept=".docx"
+                    onChange={(e) => setCreateFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Medan tersedia</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Guna sintaks <code className="rounded bg-muted px-1 text-xs">{`{{ medan }}`}</code> dalam
+                    templat. Klik medan untuk salin.
+                  </p>
+                  <div className="max-h-52 overflow-y-auto rounded-md border p-2">
+                    <TemplateFieldsPanel />
+                  </div>
+                </div>
+              </>
             )}
           </div>
           <DialogFooter>
@@ -672,8 +693,37 @@ interface TemplateRouteResponse {
 
 function showTemplateWarning(warn?: string[]) {
   if (warn && warn.length > 0) {
-    toast.warning(`Medan tidak dikenali: ${warn.join(", ")}`);
+    toast.warning(`Medan tidak dikenali: ${warn.join(", ")}. Semak senarai medan tersedia.`);
   }
+}
+
+function TemplateFieldsPanel() {
+  const copy = (key: string) => {
+    const text = `{{ ${key} }}`;
+    navigator.clipboard?.writeText(text).then(
+      () => toast.success(`${text} disalin.`),
+      () => toast.error("Gagal menyalin."),
+    );
+  };
+
+  return (
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      {TEMPLATE_FIELDS.map((f) => (
+        <button
+          key={f.key}
+          type="button"
+          onClick={() => copy(f.key)}
+          title={`${f.label}: ${f.description}`}
+          className="flex flex-col items-start gap-0.5 rounded-md border border-border bg-background px-2.5 py-2 text-left text-sm transition-colors hover:border-ring hover:bg-accent"
+        >
+          <code className="text-xs font-medium text-primary">{`{{ ${f.key} }}`}</code>
+          <span className="text-xs text-muted-foreground">
+            {f.label} — {f.description}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function ReplaceButton({ onFile }: { onFile: (file: File) => void }) {
