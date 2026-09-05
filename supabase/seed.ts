@@ -126,7 +126,6 @@ async function main() {
       ["tblUnitSKU", "SELECT * FROM tblUnitSKU"],
       ["tblUnitPKU", "SELECT * FROM tblUnitPKU"],
       ["tblSystemSettings", "SELECT * FROM tblSystemSettings"],
-      ["tblColorSchemes", "SELECT * FROM tblColorSchemes"],
       ["tblSenaraiUbat", "SELECT * FROM tblSenaraiUbat"],
       ["tblSenaraiPrabungkus", "SELECT * FROM tblSenaraiPrabungkus"],
     ];

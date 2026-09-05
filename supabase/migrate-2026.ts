@@ -158,7 +158,6 @@ const REMAP: Record<string, Record<string, string>> = {
   tblkategoriubat: { ID: "ID" },
   tblunitsku: { ID: "ID" },
   tblunitpku: { ID: "ID" },
-  tblcolorschemes: { ID: "ID" },
   tblsenaraiubat: {
     ID: "ID",
     deskripsiPrabungkus: "deskripsiprabungkus",
@@ -224,7 +223,6 @@ async function main() {
   await deleteAll(admin, "tblunitsku");
   await deleteAll(admin, "tblunitpku");
   await deleteAll(admin, "tblsystemsettings", "settingkey");
-  await deleteAll(admin, "tblcolorschemes");
   await deleteAll(udsAdmin, "tblrekodlabel");
   await deleteAll(udsAdmin, "tblnamaubat");
 
@@ -311,7 +309,6 @@ async function main() {
     { settingkey: `running_number_${TARGET_YEAR}`, settingvalue: String(maxPrepack + 1) },
     { settingkey: `running_number_uds_${TARGET_YEAR}`, settingvalue: String(maxUds + 1) },
     { settingkey: "admin_password", settingvalue: hashPassword("farmasi456") },
-    { settingkey: "color_scheme", settingvalue: "light" },
   ];
   const { error: settingsErr } = await admin.from("tblsystemsettings").insert(settings);
   if (settingsErr) {
@@ -321,7 +318,6 @@ async function main() {
     console.log(`    running_number_${TARGET_YEAR} = ${maxPrepack + 1}`);
     console.log(`    running_number_uds_${TARGET_YEAR} = ${maxUds + 1}`);
     console.log("    admin_password = farmasi456 (default)");
-    console.log("    color_scheme = light");
   }
 
   prepackDb.close();

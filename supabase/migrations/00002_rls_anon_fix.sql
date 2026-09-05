@@ -56,13 +56,3 @@ create policy "settings_write" on public.tblSystemSettings
   for all to anon, authenticated
   using (pg_catalog.current_setting('app.password_verified', true) = 'true')
   with check (pg_catalog.current_setting('app.password_verified', true) = 'true');
-
-drop policy if exists "color_schemes_read" on public.tblColorSchemes;
-create policy "color_schemes_read" on public.tblColorSchemes
-  for select to anon, authenticated using (true);
-
-drop policy if exists "color_schemes_write" on public.tblColorSchemes;
-create policy "color_schemes_write" on public.tblColorSchemes
-  for all to anon, authenticated
-  using (pg_catalog.current_setting('app.password_verified', true) = 'true')
-  with check (pg_catalog.current_setting('app.password_verified', true) = 'true');
