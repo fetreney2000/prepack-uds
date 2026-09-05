@@ -578,6 +578,14 @@ function TemplateSection({
         <CardDescription>{desc}</CardDescription>
       </CardHeader>
       <CardContent>
+        <details className="mb-3 rounded-md border">
+          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-muted-foreground">
+            Senarai medan templat ({`{{ variable }}`})
+          </summary>
+          <div className="max-h-64 overflow-y-auto border-t p-2">
+            <TemplateFieldsPanel />
+          </div>
+        </details>
         {loading ? (
           <Skeleton className="h-24 w-full" />
         ) : (
@@ -624,14 +632,6 @@ function TemplateSection({
             )}
           </div>
         )}
-        <details className="mt-3 rounded-md border">
-          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-muted-foreground">
-            Senarai medan templat ({`{{ variable }}`})
-          </summary>
-          <div className="max-h-64 overflow-y-auto border-t p-2">
-            <TemplateFieldsPanel />
-          </div>
-        </details>
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
