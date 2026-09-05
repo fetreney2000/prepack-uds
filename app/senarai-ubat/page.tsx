@@ -1,16 +1,53 @@
-// Senarai Ubat — searchable/sortable/paginated medication master list (read-only, Phase 1)
+// Senarai Ubat — searchable/sortable/paginated medication master list with CRUD
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
 import { useUbatList, type UbatRecord } from "@/lib/queries";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { UbatForm } from "@/components/modals/ubat-form";
+import { deleteUbat } from "@/app/actions/ubat";
+import { toast } from "sonner";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 export default function SenaraiUbatPage() {
   const { data, isLoading, isError, error } = useUbatList();
+  const queryClient = useQueryClient();
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<UbatRecord | null>(null);
+  const [deleting, setDeleting] = useState<UbatRecord | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    const res = await deleteUbat(deleting.ID);
+    setDeleteBusy(false);
+
+    if (res.ok) {
+      toast.success("Ubat dipadam.");
+      queryClient.invalidateQueries({ queryKey: ["ubat"] });
+      setDeleting(null);
+    } else {
+      toast.error(res.error ?? "Gagal memadam ubat.");
+    }
+  };
 
   const columns = useMemo<ColumnDef<UbatRecord>[]>(
     () => [
@@ -21,7 +58,9 @@ export default function SenaraiUbatPage() {
           <div>
             <div className="font-medium">{row.original.namaUbat}</div>
             {row.original.namaDagangan && (
-              <div className="text-xs text-muted-foreground">{row.original.namaDagangan}</div>
+              <div className="text-xs text-muted-foreground">
+                {row.original.namaDagangan}
+              </div>
             )}
           </div>
         ),
@@ -33,7 +72,9 @@ export default function SenaraiUbatPage() {
       {
         accessorKey: "kategoriUbat",
         header: "Kategori",
-        cell: ({ row }) => <Badge variant="secondary">{row.original.kategoriUbat}</Badge>,
+        cell: ({ row }) => (
+          <Badge variant="secondary">{row.original.kategoriUbat}</Badge>
+        ),
       },
       {
         accessorKey: "unitSKU",
@@ -49,7 +90,33 @@ export default function SenaraiUbatPage() {
         accessorKey: "harga",
         header: "Harga (RM)",
         cell: ({ row }) =>
-          row.original.harga != null ? `RM ${row.original.harga.toFixed(2)}` : "—",
+          row.original.harga != null
+            ? `RM ${row.original.harga.toFixed(2)}`
+            : "—",
+      },
+      {
+        id: "actions",
+        header: "Tindakan",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Sunting ubat"
+              onClick={() => setEditing(row.original)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Padam ubat"
+              onClick={() => setDeleting(row.original)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ),
       },
     ],
     [],
@@ -59,6 +126,10 @@ export default function SenaraiUbatPage() {
     <PageShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Ubat</h1>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Tambah Ubat
+        </Button>
       </div>
 
       {isError && (
@@ -79,6 +150,58 @@ export default function SenaraiUbatPage() {
           searchPlaceholder="Cari nama ubat atau kategori..."
         />
       )}
+
+      {/* Create / Edit wizard modal */}
+      <UbatForm open={createOpen} onOpenChange={setCreateOpen} />
+      <UbatForm
+        open={!!editing}
+        onOpenChange={(v) => !v && setEditing(null)}
+        editing={editing}
+      />
+
+      {/* Delete confirmation */}
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Padam Ubat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda pasti mahu memadam ubat ini? Tindakan ini tidak boleh
+              dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {deleting && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-md border bg-muted/40 p-3 text-sm">
+              <dt className="text-muted-foreground">Nama</dt>
+              <dd className="font-medium">{deleting.namaUbat}</dd>
+              <dt className="text-muted-foreground">Kategori</dt>
+              <dd>{deleting.kategoriUbat}</dd>
+              {deleting.namaDagangan && (
+                <>
+                  <dt className="text-muted-foreground">Nama Dagangan</dt>
+                  <dd>{deleting.namaDagangan}</dd>
+                </>
+              )}
+            </dl>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteBusy}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteBusy}
+              variant="destructive"
+            >
+              {deleteBusy ? "Memadam..." : "Padam"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageShell>
   );
 }
