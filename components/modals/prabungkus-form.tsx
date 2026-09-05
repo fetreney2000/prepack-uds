@@ -110,7 +110,16 @@ export function PrabungkusForm({
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
-  const items = ubatList ?? [];
+  const items = useMemo(() => ubatList ?? [], [ubatList]);
+
+  // Look up the medication record when editing (for kategoriUbat, jangkaHayat, etc.)
+  const editingUbo = useMemo(() => {
+    if (!editing || !items.length) return null;
+    return items.find((m) => m.ID === editing.idUbat) ?? null;
+  }, [editing, items]);
+
+  // Effective ubat: selected in create mode, looked up in edit mode
+  const effectiveUbo = editing ? editingUbo : ubo;
 
   const set =
     (k: FormField) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -166,13 +175,12 @@ export function PrabungkusForm({
   );
 
   const tarikhLuputBaharu = useMemo(() => {
-    if (editing) return editing.tarikhLuputBaharu;
     return calculateTarikhLuputBaharu(
-      ubo?.jangkaHayat ?? 0,
+      effectiveUbo?.jangkaHayat ?? 0,
       form.tarikh,
       form.tarikhLuputAsal || null,
     );
-  }, [editing, ubo, form.tarikh, form.tarikhLuputAsal]);
+  }, [effectiveUbo, form.tarikh, form.tarikhLuputAsal]);
 
   // Live ID preview (create mode only)
   useEffect(() => {
@@ -197,7 +205,7 @@ export function PrabungkusForm({
 
   const handleNext = () => {
     if (step === 0) {
-      if (!editing && !ubo) {
+      if (!effectiveUbo) {
         toast.error("Sila pilih ubat dari senarai.");
         return;
       }
@@ -226,19 +234,21 @@ export function PrabungkusForm({
   // ---------- Submit ----------
 
   const handleSubmit = async () => {
+    if (editing && !effectiveUbo) {
+      toast.error("Ubat berkaitan tidak dijumpai dalam senarai ubat.");
+      return;
+    }
     const payload: PrabungkusInput = {
       idUbat: editing ? editing.idUbat : ubo?.ID ?? null,
       namaUbat: editing ? editing.namaUbat : ubo?.namaUbat ?? "",
-      kategoriUbat: editing
-        ? editing.kategoriUbat
-        : ubo?.kategoriUbat ?? "",
+      kategoriUbat: effectiveUbo?.kategoriUbat ?? "",
       tarikh: form.tarikh,
       namaDagangan: form.namaDagangan || null,
       nomborKelompok: form.nomborKelompok || null,
       tarikhLuputAsal: form.tarikhLuputAsal || null,
       tarikhLuputBaharu,
-      pengilang: editing ? editing.pengilang : ubo?.pengilang ?? null,
-      nomborMAL: editing ? editing.nomborMAL : ubo?.nomborMAL ?? null,
+      pengilang: effectiveUbo?.pengilang ?? null,
+      nomborMAL: effectiveUbo?.nomborMAL ?? null,
       kuantitiUntukDiprabungkus: kuantiti,
       saizPek,
       deskripsiPek: form.deskripsiPek || null,
@@ -270,19 +280,11 @@ export function PrabungkusForm({
   // ---------- Render helpers ----------
 
   const displayNamaUbat = editing ? editing.namaUbat : ubo?.namaUbat ?? null;
-  const displaykategoriUbat = editing
-    ? editing.kategoriUbat
-    : ubo?.kategoriUbat ?? null;
+  const displaykategoriUbat = effectiveUbo?.kategoriUbat ?? null;
   const displayIdPrabungkus = editing ? editing.idPrabungkus : preview;
-  const displayNamaDagangan = editing
-    ? editing.namaDagangan
-    : form.namaDagangan || ubo?.namaDagangan || null;
-  const displayPengilang = editing
-    ? editing.pengilang
-    : ubo?.pengilang ?? null;
-  const displayNomborMAL = editing
-    ? editing.nomborMAL
-    : ubo?.nomborMAL ?? null;
+  const displayNamaDagangan = form.namaDagangan || effectiveUbo?.namaDagangan || null;
+  const displayPengilang = effectiveUbo?.pengilang ?? null;
+  const displayNomborMAL = effectiveUbo?.nomborMAL ?? null;
 
   const formatReviewValue = (label: string, value: string | null | undefined): string => {
     if (value == null || value === "") return "—";
