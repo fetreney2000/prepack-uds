@@ -80,16 +80,16 @@ const EMPTY = {
   kategoriUbat: "",
   namaDagangan: "",
   deskripsiPrabungkus: "",
-  unitSKU: "",
-  unitPKU: "",
+  unitSKU: null as string | null,
+  unitPKU: null as string | null,
   saizPek: "",
   harga: "",
   pengilang: "",
   nomborMAL: "",
   arahanTambahan: "",
   jangkaHayat: "",
-  jenisLabel: "",
-  jenisWorksheet: "",
+  jenisLabel: null as string | null,
+  jenisWorksheet: null as string | null,
 };
 
 type FormField = keyof typeof EMPTY;
@@ -163,8 +163,8 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
           kategoriUbat: editing.kategoriUbat ?? "",
           namaDagangan: editing.namaDagangan ?? "",
           deskripsiPrabungkus: editing.deskripsiPrabungkus ?? "",
-          unitSKU: editing.unitSKU ?? "",
-          unitPKU: editing.unitPKU ?? "",
+          unitSKU: editing.unitSKU ?? null,
+          unitPKU: editing.unitPKU ?? null,
           saizPek: editing.saizPek != null ? String(editing.saizPek) : "",
           harga: editing.harga != null ? String(editing.harga) : "",
           pengilang: editing.pengilang ?? "",
@@ -173,11 +173,11 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
           jangkaHayat:
             editing.jangkaHayat != null ? String(editing.jangkaHayat) : "",
           jenisLabel:
-            editing.jenisLabel != null ? String(editing.jenisLabel) : "",
+            editing.jenisLabel != null ? String(editing.jenisLabel) : null,
           jenisWorksheet:
             editing.jenisWorksheet != null
               ? String(editing.jenisWorksheet)
-              : "",
+              : null,
         });
       } else {
         setForm(EMPTY);
@@ -209,8 +209,8 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       kategoriUbat: form.kategoriUbat,
       namaDagangan: form.namaDagangan || null,
       deskripsiPrabungkus: form.deskripsiPrabungkus || null,
-      unitSKU: form.unitSKU || null,
-      unitPKU: form.unitPKU || null,
+      unitSKU: form.unitSKU,
+      unitPKU: form.unitPKU,
       saizPek: form.saizPek === "" ? null : parseFloat(form.saizPek),
       harga: form.harga === "" ? null : parseFloat(form.harga),
       pengilang: form.pengilang || null,
@@ -219,9 +219,9 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       jangkaHayat:
         form.jangkaHayat === "" ? null : parseInt(form.jangkaHayat, 10),
       jenisLabel:
-        form.jenisLabel === "" ? null : parseInt(form.jenisLabel, 10),
+        form.jenisLabel == null ? null : parseInt(form.jenisLabel, 10),
       jenisWorksheet:
-        form.jenisWorksheet === "" ? null : parseInt(form.jenisWorksheet, 10),
+        form.jenisWorksheet == null ? null : parseInt(form.jenisWorksheet, 10),
     };
 
     setSaving(true);
@@ -249,7 +249,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
 
   const formatReviewValue = (key: FormField): string => {
     const v = form[key];
-    if (v === "") return "—";
+    if (v === "" || v == null) return "—";
     switch (key) {
       case "harga":
         return `RM ${parseFloat(v).toFixed(2)}`;
@@ -330,17 +330,16 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
             <div className="space-y-1.5">
               <Label>Unit SKU</Label>
               <Select
-                value={form.unitSKU || null}
+                value={form.unitSKU}
                 onValueChange={(v) => {
-                  if (v !== null)
-                    setForm((f) => ({ ...f, unitSKU: v }));
+                  setForm((f) => ({ ...f, unitSKU: v }));
                 }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih unit SKU" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Tiada —</SelectItem>
+                  <SelectItem value={null}>— Tiada —</SelectItem>
                   {(lookups?.unitSku ?? []).map((r) => (
                     <SelectItem key={r.ID} value={r.nama}>
                       {r.nama}
@@ -352,17 +351,16 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
             <div className="space-y-1.5">
               <Label>Unit PKU</Label>
               <Select
-                value={form.unitPKU || null}
+                value={form.unitPKU}
                 onValueChange={(v) => {
-                  if (v !== null)
-                    setForm((f) => ({ ...f, unitPKU: v }));
+                  setForm((f) => ({ ...f, unitPKU: v }));
                 }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih unit PKU" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Tiada —</SelectItem>
+                  <SelectItem value={null}>— Tiada —</SelectItem>
                   {(lookups?.unitPku ?? []).map((r) => (
                     <SelectItem key={r.ID} value={r.nama}>
                       {r.nama}
@@ -451,17 +449,16 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
               <div className="space-y-1.5">
                 <Label>Jenis Label</Label>
                 <Select
-                  value={form.jenisLabel || null}
+                  value={form.jenisLabel}
                   onValueChange={(v) => {
-                    if (v !== null)
-                      setForm((f) => ({ ...f, jenisLabel: v }));
+                    setForm((f) => ({ ...f, jenisLabel: v }));
                   }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih templat label" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— Tiada —</SelectItem>
+                    <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.label ?? []).map((r) => (
                       <SelectItem key={r.ID} value={String(r.ID)}>
                         {r.deskripsilabel}
@@ -473,17 +470,16 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
               <div className="space-y-1.5">
                 <Label>Jenis Worksheet</Label>
                 <Select
-                  value={form.jenisWorksheet || null}
+                  value={form.jenisWorksheet}
                   onValueChange={(v) => {
-                    if (v !== null)
-                      setForm((f) => ({ ...f, jenisWorksheet: v }));
+                    setForm((f) => ({ ...f, jenisWorksheet: v }));
                   }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih templat worksheet" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">— Tiada —</SelectItem>
+                    <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.worksheet ?? []).map((r) => (
                       <SelectItem key={r.ID} value={String(r.ID)}>
                         {r.deskripsiworksheet}
