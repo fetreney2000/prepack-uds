@@ -173,10 +173,12 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
           jangkaHayat:
             editing.jangkaHayat != null ? String(editing.jangkaHayat) : "",
           jenisLabel:
-            editing.jenisLabel != null ? String(editing.jenisLabel) : null,
+            editing.jenisLabel != null
+              ? (lookups?.label.find((r) => r.ID === editing.jenisLabel)?.deskripsilabel ?? null)
+              : null,
           jenisWorksheet:
             editing.jenisWorksheet != null
-              ? String(editing.jenisWorksheet)
+              ? (lookups?.worksheet.find((r) => r.ID === editing.jenisWorksheet)?.deskripsiworksheet ?? null)
               : null,
         });
       } else {
@@ -219,9 +221,9 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       jangkaHayat:
         form.jangkaHayat === "" ? null : parseInt(form.jangkaHayat, 10),
       jenisLabel:
-        form.jenisLabel == null ? null : parseInt(form.jenisLabel, 10),
+        form.jenisLabel == null ? null : labelIdFromName(form.jenisLabel),
       jenisWorksheet:
-        form.jenisWorksheet == null ? null : parseInt(form.jenisWorksheet, 10),
+        form.jenisWorksheet == null ? null : worksheetIdFromName(form.jenisWorksheet),
     };
 
     setSaving(true);
@@ -241,11 +243,10 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
 
   // ---------- Render helpers ----------
 
-  const findLabel = (id: string) =>
-    lookups?.label.find((r) => String(r.ID) === id)?.deskripsilabel ?? null;
-  const findWorksheet = (id: string) =>
-    lookups?.worksheet.find((r) => String(r.ID) === id)
-      ?.deskripsiworksheet ?? null;
+  const labelIdFromName = (name: string) =>
+    lookups?.label.find((r) => r.deskripsilabel === name)?.ID ?? null;
+  const worksheetIdFromName = (name: string) =>
+    lookups?.worksheet.find((r) => r.deskripsiworksheet === name)?.ID ?? null;
 
   const formatReviewValue = (key: FormField): string => {
     const v = form[key];
@@ -255,10 +256,6 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
         return `RM ${parseFloat(v).toFixed(2)}`;
       case "jangkaHayat":
         return `${v} bulan`;
-      case "jenisLabel":
-        return findLabel(v) ?? "—";
-      case "jenisWorksheet":
-        return findWorksheet(v) ?? "—";
       default:
         return v;
     }
@@ -460,7 +457,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
                   <SelectContent>
                     <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.label ?? []).map((r) => (
-                      <SelectItem key={r.ID} value={String(r.ID)}>
+                      <SelectItem key={r.ID} value={r.deskripsilabel}>
                         {r.deskripsilabel}
                       </SelectItem>
                     ))}
@@ -481,7 +478,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
                   <SelectContent>
                     <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.worksheet ?? []).map((r) => (
-                      <SelectItem key={r.ID} value={String(r.ID)}>
+                      <SelectItem key={r.ID} value={r.deskripsiworksheet}>
                         {r.deskripsiworksheet}
                       </SelectItem>
                     ))}
