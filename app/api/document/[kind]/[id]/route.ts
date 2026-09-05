@@ -9,6 +9,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   renderDocument,
   buildTemplateData,
+  loadTemplateBuffer,
+  createFallbackTemplateBuffer,
+  templateStorageKey,
   DEFAULT_WORKSHEET_TEMPLATE,
   DEFAULT_LABEL_TEMPLATE,
   type TemplateRecord,
@@ -65,9 +68,23 @@ export async function GET(
     if (typeRow?.namafail) templateFileName = typeRow.namafail;
   }
 
-  // Render the document.
+  // Render the document: load template bytes from Storage, falling back to
+  // the generated minimal template only when the object is genuinely absent.
   const data = buildTemplateData(mapRecord(record), med);
-  const buffer = await renderDocument(templateFileName, data);
+  const storageKey = templateStorageKey(kindValid, templateFileName);
+  let templateBuffer: Uint8Array;
+  try {
+    templateBuffer =
+      (await loadTemplateBuffer(supabase, storageKey)) ??
+      createFallbackTemplateBuffer();
+  } catch (err) {
+    console.error("[document] template load failed:", err);
+    return NextResponse.json(
+      { error: "Templat tidak dapat dimuatkan." },
+      { status: 503 },
+    );
+  }
+  const buffer = renderDocument(templateBuffer, data);
 
   const safeBase = sanitizeId((record as { idprabungkus?: string }).idprabungkus ?? String(recordId));
   const filename =

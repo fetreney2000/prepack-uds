@@ -105,14 +105,16 @@ export const lookupInputSchema = z.object({
 
 export type LookupInput = z.infer<typeof lookupInputSchema>;
 
+// Label/worksheet type descriptions only. `namaFail` is derived from the
+// uploaded .docx filename (see app/api/template/...) and is immutable after
+// creation. File validation (size, .docx structure) lives in
+// lib/docx/template-render.ts `prepareTemplateUpload`.
 export const labelTypeInputSchema = z.object({
   deskripsiLabel: z.string().trim().min(1, "Deskripsi diperlukan"),
-  namaFail: z.string().trim().min(1, "Nama fail diperlukan"),
 });
 
 export const worksheetTypeInputSchema = z.object({
   deskripsiWorksheet: z.string().trim().min(1, "Deskripsi diperlukan"),
-  namaFail: z.string().trim().min(1, "Nama fail diperlukan"),
 });
 
 export const runningNumberInputSchema = z.object({

@@ -6,23 +6,27 @@
 //   - Template file chosen by namaFail from tblJenisWorksheet /
 //     tblJenisLabel, falling back to the defaults:
 //       worksheet → 'Kertas Kerja - Umum.docx'
-//       label     → 'label_tablet.docx'
+//       label     → 'Tablet - Nama - Sebelum - Saiz L.docx'
 //   - buildTemplateData composes the exact merge fields:
 //     saizPekFormatted, dd/mm/yyyy dates, hargaSetiapPek.toFixed(2).
 //   - Rendering uses docxtemplater with delimiters '{{ ' / ' }}',
 //     paragraphLoop:true, linebreaks:true.
 //
-// The 34 original .docx templates are NOT vendored in this repo.
-// A minimal fallback template is generated in-code so the pipeline is
-// functional; drop the real files into public/templates/ to match the
-// original layouts byte-for-byte.
+// Templates are stored in Supabase Storage (bucket `templates`) keyed by
+// `labels/<namaFail>` / `worksheets/<namaFail>`; the renderer receives raw
+// bytes. The public/templates/ files are only used as the one-time upload
+// source and repo backup, not read at render time.
 // ============================================================
 
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { formatDate } from "@/lib/format";
+import { TEMPLATE_BUCKET, templateStorageKey } from "./template-constants";
+import type { TemplateKind } from "./template-constants";
+
+export { TEMPLATE_BUCKET, templateStorageKey };
+export type { TemplateKind };
 
 // ---------- Types ----------
 
@@ -72,9 +76,29 @@ export interface TemplateData {
 }
 
 export const DEFAULT_WORKSHEET_TEMPLATE = "Kertas Kerja - Umum.docx";
-export const DEFAULT_LABEL_TEMPLATE = "label_tablet.docx";
+export const DEFAULT_LABEL_TEMPLATE = "Tablet - Nama - Sebelum - Saiz L.docx";
 
-const TEMPLATE_DIR = join(process.cwd(), "public", "templates");
+/** Merge fields exposed by buildTemplateData — used for upload warnings. */
+export const KNOWN_MERGE_FIELDS: string[] = [
+  "id",
+  "idPrabungkus",
+  "saizPekFormatted",
+  "tarikh",
+  "tarikhLuputAsal",
+  "tarikhLuputBaharu",
+  "hargaSetiapPek",
+  "namaUbat",
+  "namaDagangan",
+  "nomborKelompok",
+  "pengilang",
+  "nomborMAL",
+  "kuantitiUntukDiprabungkus",
+  "saizPek",
+  "deskripsiPek",
+  "jumlahPekDihasilkan",
+  "baki",
+  "arahanTambahan",
+];
 
 /**
  * Compose the merge data for a worksheet/label template (§4.6).
@@ -114,23 +138,52 @@ export function buildTemplateData(
 }
 
 /**
- * Load a .docx template from disk (or a generated fallback) and render
- * it with the given data. Returns the .docx buffer (Uint8Array).
+ * Download a template's raw bytes from Supabase Storage. Returns null only
+ * when the object is genuinely absent (caller falls back to the generated
+ * minimal template). Other failures (bucket missing, permission, network)
+ * throw so a misconfigured deployment fails loudly instead of degrading.
  */
-export async function renderDocument(
-  templateFileName: string,
-  data: TemplateData,
-): Promise<Uint8Array> {
-  let zip: PizZip;
-  try {
-    const file = await readFile(join(TEMPLATE_DIR, templateFileName));
-    zip = new PizZip(file);
-  } catch {
-    // Template not vendored → use a generated minimal fallback that
-    // carries all merge fields so the pipeline is functional.
-    zip = createFallbackTemplate();
-  }
+// Short-TTL in-memory cache so batch renders don't re-download identical
+// template bytes. Bounded staleness (60s) avoids needing cross-instance
+// invalidation after a replace.
+const templateCache = new Map<string, { buffer: Uint8Array; expiresAt: number }>();
+const TEMPLATE_CACHE_TTL_MS = 60_000;
 
+export async function loadTemplateBuffer(
+  supabase: SupabaseClient,
+  storageKey: string,
+): Promise<Uint8Array | null> {
+  const cached = templateCache.get(storageKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.buffer;
+
+  const { data, error } = await supabase.storage
+    .from(TEMPLATE_BUCKET)
+    .download(storageKey);
+
+  if (error) {
+    const status =
+      (error as { statusCode?: number; status?: number }).statusCode ??
+      (error as { status?: number }).status;
+    if (status === 404 || /not found/i.test(error.message)) return null;
+    console.error("[template-render] storage download failed:", error.message);
+    throw new Error(`Gagal memuat templat: ${error.message}`);
+  }
+  if (!data) return null;
+
+  const buf = new Uint8Array(await data.arrayBuffer());
+  templateCache.set(storageKey, {
+    buffer: buf,
+    expiresAt: Date.now() + TEMPLATE_CACHE_TTL_MS,
+  });
+  return buf;
+}
+
+/**
+ * Render a .docx template (raw bytes) with the given merge data.
+ * Returns the rendered .docx buffer.
+ */
+export function renderDocument(buffer: Uint8Array, data: TemplateData): Uint8Array {
+  const zip = new PizZip(buffer);
   const doc = new Docxtemplater(zip, {
     delimiters: { start: "{{ ", end: " }}" },
     paragraphLoop: true,
@@ -139,6 +192,93 @@ export async function renderDocument(
 
   doc.render(data);
   return doc.getZip().generate({
+    type: "uint8array",
+    compression: "DEFLATE",
+  });
+}
+
+export interface TemplateInspection {
+  valid: boolean;
+  unknownFields: string[];
+}
+
+/**
+ * Validate that a buffer is a real .docx (zip with word/document.xml)
+ * and extract any {{ merge fields }} that are not part of the known set.
+ */
+export function inspectTemplate(buffer: Uint8Array): TemplateInspection {
+  let zip: PizZip;
+  try {
+    zip = new PizZip(buffer);
+  } catch {
+    return { valid: false, unknownFields: [] };
+  }
+
+  const documentXml = zip.file("word/document.xml");
+  if (!documentXml) return { valid: false, unknownFields: [] };
+
+  const xml = documentXml.asText();
+  const tokens = Array.from(
+    xml.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g),
+    (m) => m[1].trim(),
+  );
+  const known = new Set<string>(KNOWN_MERGE_FIELDS);
+  const unknownFields = Array.from(new Set(tokens)).filter(
+    (t) => t.length > 0 && !known.has(t),
+  );
+  return { valid: true, unknownFields };
+}
+
+/** Maximum accepted .docx template size. Kept under Vercel's ~4.5 MB request
+ *  body limit so the server-side check is actually reachable. */
+export const MAX_TEMPLATE_SIZE = 4 * 1024 * 1024;
+
+/** Sanitize a user-supplied filename to a safe storage key ([A-Za-z0-9 ._-]). */
+export function sanitizeTemplateFileName(name: string): string {
+  return name
+    .replace(/^.*[\\/]/, "")
+    .replace(/[^A-Za-z0-9 ._-]/g, "_")
+    .trim();
+}
+
+export interface TemplateUploadResult {
+  ok: boolean;
+  error?: string;
+  buffer?: Uint8Array;
+  unknownFields?: string[];
+}
+
+/**
+ * Validate and read a template File from a multipart form: size, .docx
+ * extension, and valid zip structure. Returns the raw bytes and any
+ * unrecognized merge fields (non-blocking warning).
+ */
+export async function prepareTemplateUpload(
+  file: File | null,
+): Promise<TemplateUploadResult> {
+  if (!file) return { ok: false, error: "Fail tidak diberikan." };
+  if (file.size === 0) return { ok: false, error: "Fail kosong." };
+  if (file.size > MAX_TEMPLATE_SIZE) {
+    return { ok: false, error: "Saiz fail melebihi 4 MB." };
+  }
+  if (!file.name.toLowerCase().endsWith(".docx")) {
+    return { ok: false, error: "Hanya fail .docx dibenarkan." };
+  }
+
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  const inspection = inspectTemplate(buffer);
+  if (!inspection.valid) {
+    return { ok: false, error: "Fail bukan dokumen .docx yang sah." };
+  }
+  return { ok: true, buffer, unknownFields: inspection.unknownFields };
+}
+
+/**
+ * Render the minimal fallback template carrying all merge fields.
+ * Used when a referenced template is absent (never fails a render).
+ */
+export function createFallbackTemplateBuffer(): Uint8Array {
+  return createFallbackTemplate().generate({
     type: "uint8array",
     compression: "DEFLATE",
   });

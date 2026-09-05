@@ -5,6 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TEMPLATE_BUCKET, templateStorageKey } from "@/lib/docx/template-constants";
 import {
   lookupInputSchema,
   labelTypeInputSchema,
@@ -81,35 +82,22 @@ export async function deleteLookup(
 
 // ---------- Label types (tblJenisLabel) ----------
 
-export async function createLabelType(input: {
-  deskripsiLabel: string;
-  namaFail: string;
-}): Promise<ActionResult> {
-  const parsed = labelTypeInputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const supabase = createAdminClient();
-  const payload = {
-    deskripsilabel: parsed.data.deskripsiLabel,
-    namafail: parsed.data.namaFail,
-  };
-  const { error } = await supabase.from("tbljenislabel").insert(payload);
-  if (error) return { ok: false, error: error.message };
-  revalidateLookups();
-  return { ok: true };
-}
+// Template files live in Supabase Storage bucket `templates`, keyed by
+// `labels/<namaFail>` / `worksheets/<namaFail>` (see lib/docx/template-constants).
+// `namaFail` is derived from the uploaded .docx (app/api/template/...) and is
+// immutable after creation, so updates change only the description.
 
 export async function updateLabelType(
   id: number,
-  input: { deskripsiLabel: string; namaFail: string },
+  input: { deskripsiLabel: string },
 ): Promise<ActionResult> {
   const parsed = labelTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const payload = {
-    deskripsilabel: parsed.data.deskripsiLabel,
-    namafail: parsed.data.namaFail,
-  };
-  const { error } = await supabase.from("tbljenislabel").update(payload).eq("ID", id);
+  const { error } = await supabase
+    .from("tbljenislabel")
+    .update({ deskripsilabel: parsed.data.deskripsiLabel })
+    .eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -117,43 +105,36 @@ export async function updateLabelType(
 
 export async function deleteLabelType(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
+  const { data: target } = await supabase
+    .from("tbljenislabel")
+    .select("namafail")
+    .eq("ID", id)
+    .maybeSingle();
   const { error } = await supabase.from("tbljenislabel").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
+  const namaFail = (target as { namafail?: string } | null)?.namafail;
+  if (namaFail) {
+    await supabase.storage
+      .from(TEMPLATE_BUCKET)
+      .remove([templateStorageKey("label", namaFail)]);
+  }
   revalidateLookups();
   return { ok: true };
 }
 
 // ---------- Worksheet types (tblJenisWorksheet) ----------
 
-export async function createWorksheetType(input: {
-  deskripsiWorksheet: string;
-  namaFail: string;
-}): Promise<ActionResult> {
-  const parsed = worksheetTypeInputSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const supabase = createAdminClient();
-  const payload = {
-    deskripsiworksheet: parsed.data.deskripsiWorksheet,
-    namafail: parsed.data.namaFail,
-  };
-  const { error } = await supabase.from("tbljenisworksheet").insert(payload);
-  if (error) return { ok: false, error: error.message };
-  revalidateLookups();
-  return { ok: true };
-}
-
 export async function updateWorksheetType(
   id: number,
-  input: { deskripsiWorksheet: string; namaFail: string },
+  input: { deskripsiWorksheet: string },
 ): Promise<ActionResult> {
   const parsed = worksheetTypeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const supabase = createAdminClient();
-  const payload = {
-    deskripsiworksheet: parsed.data.deskripsiWorksheet,
-    namafail: parsed.data.namaFail,
-  };
-  const { error } = await supabase.from("tbljenisworksheet").update(payload).eq("ID", id);
+  const { error } = await supabase
+    .from("tbljenisworksheet")
+    .update({ deskripsiworksheet: parsed.data.deskripsiWorksheet })
+    .eq("ID", id);
   if (error) return { ok: false, error: error.message };
   revalidateLookups();
   return { ok: true };
@@ -161,8 +142,19 @@ export async function updateWorksheetType(
 
 export async function deleteWorksheetType(id: number): Promise<ActionResult> {
   const supabase = createAdminClient();
+  const { data: target } = await supabase
+    .from("tbljenisworksheet")
+    .select("namafail")
+    .eq("ID", id)
+    .maybeSingle();
   const { error } = await supabase.from("tbljenisworksheet").delete().eq("ID", id);
   if (error) return { ok: false, error: error.message };
+  const namaFail = (target as { namafail?: string } | null)?.namafail;
+  if (namaFail) {
+    await supabase.storage
+      .from(TEMPLATE_BUCKET)
+      .remove([templateStorageKey("worksheet", namaFail)]);
+  }
   revalidateLookups();
   return { ok: true };
 }

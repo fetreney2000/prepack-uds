@@ -3,7 +3,7 @@
 // running numbers, and password change. Matches §4.11 of the analysis.
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -26,17 +26,14 @@ import {
   createLookup,
   updateLookup,
   deleteLookup,
-  createLabelType,
   updateLabelType,
   deleteLabelType,
-  createWorksheetType,
   updateWorksheetType,
   deleteWorksheetType,
   updateRunningNumber,
   setActiveColorScheme,
   createCustomColorScheme,
   deleteCustomColorScheme,
-  type ActionResult,
 } from "@/app/actions/settings";
 import { verifyAdminPassword, changeAdminPassword } from "@/app/actions/auth";
 import { BUILT_IN_SCHEMES, findBuiltInScheme, deriveCssVars } from "@/lib/color-schemes";
@@ -53,6 +50,8 @@ import {
   Boxes,
   FileText,
   Hash,
+  Download,
+  Upload,
 } from "lucide-react";
 
 // ---------- Types ----------
@@ -61,9 +60,13 @@ interface LookupRow {
   ID: number;
   nama?: string;
   prefix?: string | null;
+}
+
+interface TemplateRow {
+  ID: number;
   deskripsiLabel?: string;
-  namafail?: string;
   deskripsiWorksheet?: string;
+  namaFail?: string;
 }
 
 type LookupTable = "tblKategoriUbat" | "tblUnitSKU" | "tblUnitPKU";
@@ -89,15 +92,21 @@ function useLookups() {
         supabase.from("tblkategoriubat").select("ID, nama, prefix").order("nama"),
         supabase.from("tblunitsku").select("ID, nama").order("nama"),
         supabase.from("tblunitpku").select("ID, nama").order("nama"),
-        supabase.from("tbljenislabel").select("ID, deskripsiLabel, namaFail").order("ID"),
-        supabase.from("tbljenisworksheet").select("ID, deskripsiWorksheet, namaFail").order("ID"),
+        supabase
+          .from("tbljenislabel")
+          .select("ID, deskripsiLabel:deskripsilabel, namaFail:namafail")
+          .order("ID"),
+        supabase
+          .from("tbljenisworksheet")
+          .select("ID, deskripsiWorksheet:deskripsiworksheet, namaFail:namafail")
+          .order("ID"),
       ]);
       return {
         kategori: (kategori.data ?? []) as LookupRow[],
         unitSku: (unitSku.data ?? []) as LookupRow[],
         unitPku: (unitPku.data ?? []) as LookupRow[],
-        label: (label.data ?? []) as LookupRow[],
-        worksheet: (worksheet.data ?? []) as LookupRow[],
+        label: (label.data ?? []) as TemplateRow[],
+        worksheet: (worksheet.data ?? []) as TemplateRow[],
       };
     },
   });
@@ -226,23 +235,21 @@ export default function TetapanPage() {
             onSaved={refresh}
             table="tblUnitPKU"
           />
-          <LookupSection
+          <TemplateSection
             title="Jenis Label"
-            desc="Template label (.docx)"
+            desc="Template label (.docx) — muat turun, sunting di Word, muat naik semula."
             icon={<FileText className="size-4" />}
             rows={lookups?.label}
             loading={!lookups}
-            columns={["deskripsiLabel", "namaFail"]}
             onSaved={refresh}
             kind="label"
           />
-          <LookupSection
+          <TemplateSection
             title="Jenis Worksheet"
-            desc="Template kertas kerja (.docx)"
+            desc="Template kertas kerja (.docx) — muat turun, sunting di Word, muat naik semula."
             icon={<FileText className="size-4" />}
             rows={lookups?.worksheet}
             loading={!lookups}
-            columns={["deskripsiWorksheet", "namaFail"]}
             onSaved={refresh}
             kind="worksheet"
           />
@@ -335,7 +342,6 @@ function LookupSection({
   columns,
   onSaved,
   table,
-  kind,
 }: {
   title: string;
   desc: string;
@@ -344,8 +350,7 @@ function LookupSection({
   loading: boolean;
   columns: string[];
   onSaved: () => void;
-  table?: LookupTable;
-  kind?: "label" | "worksheet";
+  table: LookupTable;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LookupRow | null>(null);
@@ -371,30 +376,6 @@ function LookupSection({
   };
 
   const handleSave = async () => {
-    if (kind) {
-      const isLabel = kind === "label";
-      const payload = {
-        [isLabel ? "deskripsiLabel" : "deskripsiWorksheet"]: form[columns[0]],
-        namaFail: form[columns[1]],
-      };
-      const res = editing
-        ? isLabel
-          ? await updateLabelType(editing.ID, payload as never)
-          : await updateWorksheetType(editing.ID, payload as never)
-        : isLabel
-          ? await createLabelType(payload as never)
-          : await createWorksheetType(payload as never);
-      if (res.ok) {
-        toast.success("Disimpan.");
-        setDialogOpen(false);
-        onSaved();
-      } else {
-        toast.error(res.error ?? "Gagal menyimpan.");
-      }
-      return;
-    }
-
-    if (!table) return;
     const payload = { nama: form[columns[0]], prefix: form.prefix ?? null };
     const res = editing
       ? await updateLookup(table, editing.ID, payload)
@@ -410,11 +391,7 @@ function LookupSection({
 
   const handleDelete = async (row: LookupRow) => {
     if (!confirm(`Padam '${labelOf(row, columns)}'?`)) return;
-    let res: ActionResult;
-    if (kind === "label") res = await deleteLabelType(row.ID);
-    else if (kind === "worksheet") res = await deleteWorksheetType(row.ID);
-    else if (table) res = await deleteLookup(table, row.ID);
-    else return;
+    const res = await deleteLookup(table, row.ID);
     if (res.ok) {
       toast.success("Dipadam.");
       onSaved();
@@ -503,13 +480,285 @@ function LookupSection({
   );
 }
 
+// ---------- Template types (label / worksheet .docx) ----------
+
+function TemplateSection({
+  title,
+  desc,
+  icon,
+  rows,
+  loading,
+  onSaved,
+  kind,
+}: {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  rows?: TemplateRow[];
+  loading: boolean;
+  onSaved: () => void;
+  kind: "label" | "worksheet";
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<TemplateRow | null>(null);
+  const [descValue, setDescValue] = useState("");
+  const [createFile, setCreateFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const descKey = kind === "label" ? "deskripsiLabel" : "deskripsiWorksheet";
+
+  const openCreate = () => {
+    setEditing(null);
+    setDescValue("");
+    setCreateFile(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (row: TemplateRow) => {
+    setEditing(row);
+    setDescValue(String((row as unknown as Record<string, unknown>)[descKey] ?? ""));
+    setCreateFile(null);
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    const desc = descValue.trim();
+    if (!desc) {
+      toast.error("Deskripsi diperlukan.");
+      return;
+    }
+
+    if (editing) {
+      const res =
+        kind === "label"
+          ? await updateLabelType(editing.ID, { deskripsiLabel: desc })
+          : await updateWorksheetType(editing.ID, { deskripsiWorksheet: desc });
+      if (res.ok) {
+        toast.success("Disimpan.");
+        setDialogOpen(false);
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal menyimpan.");
+      }
+      return;
+    }
+
+    if (!createFile) {
+      toast.error("Sila pilih fail .docx.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.set("deskripsi", desc);
+      fd.set("file", createFile);
+      const resp = await fetch(`/api/template/${kind}`, { method: "POST", body: fd });
+      const json = (await resp.json()) as TemplateRouteResponse;
+      if (json.ok) {
+        toast.success("Jenis baharu dibuat.");
+        showTemplateWarning(json.warn);
+        setDialogOpen(false);
+        onSaved();
+      } else {
+        toast.error(json.error ?? "Gagal mencipta jenis.");
+      }
+    } catch {
+      toast.error("Gagal mencipta jenis.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (row: TemplateRow) => {
+    const label =
+      String((row as unknown as Record<string, unknown>)[descKey] ?? "") || row.namaFail;
+    if (!confirm(`Padam '${label}'?`)) return;
+    const res =
+      kind === "label" ? await deleteLabelType(row.ID) : await deleteWorksheetType(row.ID);
+    if (res.ok) {
+      toast.success("Dipadam.");
+      onSaved();
+    } else {
+      toast.error(res.error ?? "Gagal memadam.");
+    }
+  };
+
+  const handleReplace = async (row: TemplateRow, file: File | null) => {
+    if (!file) return;
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const resp = await fetch(`/api/template/${kind}/${row.ID}`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = (await resp.json()) as TemplateRouteResponse;
+      if (json.ok) {
+        toast.success("Templat diganti.");
+        showTemplateWarning(json.warn);
+        onSaved();
+      } else {
+        toast.error(json.error ?? "Gagal menggantikan templat.");
+      }
+    } catch {
+      toast.error("Gagal menggantikan templat.");
+    }
+  };
+
+  const download = (row: TemplateRow) => {
+    const a = document.createElement("a");
+    a.href = `/api/template/${kind}/${row.ID}`;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">{icon}</span>
+            <CardTitle>{title}</CardTitle>
+          </div>
+          <Button size="sm" variant="outline" onClick={openCreate}>
+            <Plus className="size-3 mr-1" /> Tambah
+          </Button>
+        </div>
+        <CardDescription>{desc}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : (
+          <div className="divide-y divide-border rounded-md border">
+            {(rows ?? []).map((row) => (
+              <div key={row.ID} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                <div className="flex min-w-0 flex-col">
+                  <span className="font-medium">
+                    {String((row as unknown as Record<string, unknown>)[descKey] ?? "")}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">{row.namaFail}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    onClick={() => download(row)}
+                    aria-label="Muat turun templat"
+                  >
+                    <Download className="size-3" />
+                  </Button>
+                  <ReplaceButton onFile={(f) => handleReplace(row, f)} />
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    onClick={() => openEdit(row)}
+                    aria-label="Sunting deskripsi"
+                  >
+                    <Pencil className="size-3" />
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="ghost"
+                    onClick={() => handleDelete(row)}
+                    aria-label="Padam"
+                  >
+                    <Trash2 className="size-3 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {(rows ?? []).length === 0 && (
+              <p className="px-3 py-4 text-sm text-muted-foreground">Tiada rekod.</p>
+            )}
+          </div>
+        )}
+      </CardContent>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? `Sunting ${title}` : `Tambah ${title}`}</DialogTitle>
+            <DialogDescription>{desc}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="tpl-desc">Deskripsi</Label>
+              <Input
+                id="tpl-desc"
+                value={descValue}
+                onChange={(e) => setDescValue(e.target.value)}
+              />
+            </div>
+            {!editing && (
+              <div className="space-y-1.5">
+                <Label htmlFor="tpl-file">Fail .docx</Label>
+                <Input
+                  id="tpl-file"
+                  type="file"
+                  accept=".docx"
+                  onChange={(e) => setCreateFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+interface TemplateRouteResponse {
+  ok?: boolean;
+  error?: string;
+  warn?: string[];
+}
+
+function showTemplateWarning(warn?: string[]) {
+  if (warn && warn.length > 0) {
+    toast.warning(`Medan tidak dikenali: ${warn.join(", ")}`);
+  }
+}
+
+function ReplaceButton({ onFile }: { onFile: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".docx"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.target.value = "";
+        }}
+      />
+      <Button
+        size="icon-xs"
+        variant="ghost"
+        onClick={() => inputRef.current?.click()}
+        aria-label="Ganti fail templat"
+      >
+        <Upload className="size-3" />
+      </Button>
+    </>
+  );
+}
+
 function fieldLabel(key: string): string {
   const map: Record<string, string> = {
     nama: "Nama",
     prefix: "Prefix",
-    deskripsiLabel: "Deskripsi Label",
-    namaFail: "Nama Fail",
-    deskripsiWorksheet: "Deskripsi Worksheet",
   };
   return map[key] ?? key;
 }

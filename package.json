@@ -9,6 +9,7 @@
     "lint": "eslint",
     "seed": "tsx supabase/seed.ts",
     "migrate:2026": "tsx supabase/migrate-2026.ts",
+    "upload:templates": "tsx supabase/upload-templates.ts",
     "test:differential": "tsx supabase/differential-test.ts"
   },
   "dependencies": {
