@@ -10,6 +10,7 @@ export interface PrabungkusRecord {
   ID: number;
   idUbat: number | null;
   namaUbat: string;
+  kategoriUbat: string;
   tarikh: string;
   idPrabungkus: string;
   namaDagangan: string | null;
@@ -79,7 +80,7 @@ export function usePrabungkusList() {
       const { data, error } = (await supabase
         .from("tblsenaraiprabungkus")
         .select(
-          "ID, idUbat:idubat, namaUbat:namaubat, tarikh, idPrabungkus:idprabungkus, " +
+          "ID, idUbat:idubat, namaUbat:namaubat, kategoriUbat:kategoriubat, tarikh, idPrabungkus:idprabungkus, " +
             "namaDagangan:namadagangan, nomborKelompok:nomborkelompok, " +
             "tarikhLuputAsal:tarikhluputasal, tarikhLuputBaharu:tarikhluputbaharu, " +
             "pengilang, nomborMAL:nombormal, " +
