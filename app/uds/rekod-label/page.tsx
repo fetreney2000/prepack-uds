@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
 import { useUdsRekodLabelList, type UdsRekodLabel } from "@/lib/queries";
@@ -25,6 +26,32 @@ import {
 import { toast } from "sonner";
 import { deleteUdsRekodLabel } from "@/app/actions/uds";
 import { Plus, Printer, Pencil, Trash2 } from "lucide-react";
+
+const udsRekodLabelColumnVisibility: VisibilityState = {
+  Kekuatan: false,
+  Kelompok: false,
+  Luput: false,
+  Penyedia: false,
+};
+
+function renderUdsRekodLabelDetail(row: UdsRekodLabel) {
+  const fields: { label: string; value: string | number | null | undefined }[] = [
+    { label: "Kekuatan", value: row.Kekuatan },
+    { label: "Kelompok", value: row.Kelompok },
+    { label: "Luput", value: row.Luput },
+    { label: "Penyedia", value: row.Penyedia },
+  ];
+  return (
+    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+      {fields.map((f) => (
+        <div key={f.label}>
+          <dt className="text-muted-foreground">{f.label}</dt>
+          <dd className="font-medium">{f.value ?? "—"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export default function UdsRekodLabelPage() {
   const { data, isLoading, isError, error } = useUdsRekodLabelList();
@@ -91,6 +118,7 @@ export default function UdsRekodLabelPage() {
       {
         id: "actions",
         header: "Tindakan",
+        enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
             <Button
@@ -150,6 +178,8 @@ export default function UdsRekodLabelPage() {
           columns={columns}
           data={data ?? []}
           searchPlaceholder="Cari rujukan, nama ubat, atau penyedia..."
+          initialColumnVisibility={udsRekodLabelColumnVisibility}
+          renderDetailPanel={renderUdsRekodLabelDetail}
         />
       )}
 

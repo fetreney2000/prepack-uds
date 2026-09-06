@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
@@ -24,6 +25,35 @@ import { UbatForm } from "@/components/modals/ubat-form";
 import { deleteUbat } from "@/app/actions/ubat";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+
+const ubatColumnVisibility: VisibilityState = {
+  deskripsiPrabungkus: false,
+  unitSKU: false,
+  saizPek: false,
+};
+
+function renderUbatDetail(row: UbatRecord) {
+  const fields: { label: string; value: string | number | null | undefined }[] = [
+    { label: "Deskripsi Prabungkus", value: row.deskripsiPrabungkus },
+    { label: "Unit SKU", value: row.unitSKU },
+    { label: "Unit PKU", value: row.unitPKU },
+    { label: "Saiz Pek", value: row.saizPek },
+    { label: "Pengilang", value: row.pengilang },
+    { label: "No. MAL", value: row.nomborMAL },
+    { label: "Jangka Hayat", value: row.jangkaHayat != null ? `${row.jangkaHayat} bulan` : null },
+    { label: "Arahan Tambahan", value: row.arahanTambahan },
+  ];
+  return (
+    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+      {fields.map((f) => (
+        <div key={f.label}>
+          <dt className="text-muted-foreground">{f.label}</dt>
+          <dd className="font-medium">{f.value ?? "—"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export default function SenaraiUbatPage() {
   const { data, isLoading, isError, error } = useUbatList();
@@ -97,6 +127,7 @@ export default function SenaraiUbatPage() {
       {
         id: "actions",
         header: "Tindakan",
+        enableHiding: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
             <Button
@@ -148,6 +179,8 @@ export default function SenaraiUbatPage() {
           columns={columns}
           data={data ?? []}
           searchPlaceholder="Cari nama ubat atau kategori..."
+          initialColumnVisibility={ubatColumnVisibility}
+          renderDetailPanel={renderUbatDetail}
         />
       )}
 

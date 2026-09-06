@@ -3,6 +3,7 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { VisibilityState } from "@tanstack/react-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { DataTable } from "@/components/tables/data-table";
@@ -39,6 +40,37 @@ import {
   Printer,
   Trash2,
 } from "lucide-react";
+
+const prabungkusColumnVisibility: VisibilityState = {
+  deskripsiPek: false,
+};
+
+function renderPrabungkusDetail(row: PrabungkusRecord) {
+  const fields: { label: string; value: string | number | null | undefined }[] = [
+    { label: "Deskripsi Pek", value: row.deskripsiPek },
+    { label: "Nama Dagangan", value: row.namaDagangan },
+    { label: "No. Kelompok", value: row.nomborKelompok },
+    { label: "Tarikh Luput Asal", value: row.tarikhLuputAsal ? formatDate(row.tarikhLuputAsal) : null },
+    { label: "Tarikh Luput Baharu", value: row.tarikhLuputBaharu ? formatDate(row.tarikhLuputBaharu) : null },
+    { label: "Pengilang", value: row.pengilang },
+    { label: "No. MAL", value: row.nomborMAL },
+    { label: "Kuantiti Diprabungkus", value: row.kuantitiUntukDiprabungkus },
+    { label: "Saiz Pek", value: row.saizPek },
+    { label: "Harga Setiap Pek", value: row.hargaSetiapPek != null ? `RM ${row.hargaSetiapPek.toFixed(2)}` : null },
+    { label: "Baki", value: row.baki },
+    { label: "Arahan Tambahan", value: row.arahanTambahan },
+  ];
+  return (
+    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+      {fields.map((f) => (
+        <div key={f.label}>
+          <dt className="text-muted-foreground">{f.label}</dt>
+          <dd className="font-medium">{f.value ?? "—"}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord) {
   const url = `/api/document/${kind}/${record.ID}`;
@@ -123,6 +155,7 @@ export default function RekodPrabungkusPage() {
       {
         id: "actions",
         header: "Tindakan",
+        enableHiding: false,
         cell: ({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -188,6 +221,8 @@ export default function RekodPrabungkusPage() {
           columns={columns}
           data={data ?? []}
           searchPlaceholder="Cari nama ubat, ID, atau deskripsi..."
+          initialColumnVisibility={prabungkusColumnVisibility}
+          renderDetailPanel={renderPrabungkusDetail}
         />
       )}
 
