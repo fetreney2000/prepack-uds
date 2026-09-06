@@ -216,6 +216,32 @@ export interface TemplateInspection {
   unknownFields: string[];
 }
 
+/** Decode common XML entities found inside <w:t> text runs. */
+function decodeXmlEntities(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+/**
+ * Extract the plain-text content of a .docx document.xml by concatenating
+ * every <w:t> run in document order. Word fragments placeholder text across
+ * runs and inserts <w:proofErr>/<w:rPr> elements, so matching against the raw
+ * XML would capture markup instead of the actual {{ field }} names.
+ */
+function extractDocumentText(xml: string): string {
+  const parts: string[] = [];
+  const runRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+  let m: RegExpExecArray | null;
+  while ((m = runRegex.exec(xml)) !== null) {
+    parts.push(decodeXmlEntities(m[1]));
+  }
+  return parts.join("");
+}
+
 /**
  * Validate that a buffer is a real .docx (zip with word/document.xml)
  * and extract any {{ merge fields }} that are not part of the known set.
@@ -231,9 +257,9 @@ export function inspectTemplate(buffer: Uint8Array): TemplateInspection {
   const documentXml = zip.file("word/document.xml");
   if (!documentXml) return { valid: false, unknownFields: [] };
 
-  const xml = documentXml.asText();
+  const text = extractDocumentText(documentXml.asText());
   const tokens = Array.from(
-    xml.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g),
+    text.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g),
     (m) => m[1].trim(),
   );
   const known = new Set<string>(KNOWN_MERGE_FIELDS);

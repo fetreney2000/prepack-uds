@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSameOriginRequest } from "@/lib/api/same-origin";
 import {
   prepareTemplateUpload,
+  sanitizeTemplateFileName,
   templateStorageKey,
   TEMPLATE_BUCKET,
   type TemplateKind,
@@ -71,14 +72,36 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "Borang tidak sah." }, { status: 400 });
   }
 
-  const prepared = await prepareTemplateUpload(getFile(formData));
+  const file = getFile(formData);
+  const prepared = await prepareTemplateUpload(file);
   if (!prepared.ok) {
     return NextResponse.json({ ok: false, error: prepared.error }, { status: 400 });
   }
 
-  // Replace writes to the row's existing namaFail key (uploaded filename is ignored).
   const supabase = createAdminClient();
-  const key = templateStorageKey(kindValid, row.namafail);
+  const table = kindValid === "label" ? "tbljenislabel" : "tbljenisworksheet";
+
+  const oldName = row.namafail;
+  const newName = sanitizeTemplateFileName(file?.name ?? "");
+  const nameChanged = newName.length > 0 && newName !== oldName;
+
+  if (nameChanged) {
+    // Reject a rename that collides with another row's filename.
+    const { data: clash, error: clashErr } = await supabase
+      .from(table)
+      .select("ID")
+      .eq("namafail", newName)
+      .neq("ID", typeId)
+      .maybeSingle();
+    if (clashErr || clash) {
+      return NextResponse.json(
+        { ok: false, error: "Nama fail sudah wujud." },
+        { status: 409 },
+      );
+    }
+  }
+
+  const key = templateStorageKey(kindValid, nameChanged ? newName : oldName);
   const { error: uploadErr } = await supabase.storage
     .from(TEMPLATE_BUCKET)
     .upload(key, prepared.buffer as Uint8Array, {
@@ -92,7 +115,30 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ ok: true, warn: prepared.unknownFields ?? [] });
+  if (nameChanged) {
+    // Point the row at the new filename (render + download read this).
+    const { error: updateErr } = await supabase
+      .from(table)
+      .update({ namafail: newName })
+      .eq("ID", typeId);
+    if (updateErr) {
+      await supabase.storage.from(TEMPLATE_BUCKET).remove([key]);
+      return NextResponse.json(
+        { ok: false, error: `Gagal mengemas kini nama fail: ${updateErr.message}` },
+        { status: 500 },
+      );
+    }
+    // Remove the previous object (best-effort).
+    await supabase.storage
+      .from(TEMPLATE_BUCKET)
+      .remove([templateStorageKey(kindValid, oldName)]);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    warn: prepared.unknownFields ?? [],
+    namaFail: nameChanged ? newName : oldName,
+  });
 }
 
 export async function GET(
