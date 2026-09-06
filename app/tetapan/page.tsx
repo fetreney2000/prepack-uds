@@ -3,7 +3,7 @@
 // and password change. Matches §4.11 of the analysis.
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageShell } from "@/components/page-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -47,6 +47,7 @@ import {
   Hash,
   Download,
   Upload,
+  Search,
 } from "lucide-react";
 
 // ---------- Types ----------
@@ -453,8 +454,25 @@ function TemplateSection({
   const [descValue, setDescValue] = useState("");
   const [createFile, setCreateFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
 
   const descKey = kind === "label" ? "deskripsiLabel" : "deskripsiWorksheet";
+
+  // Alphabetical (by description), then filtered by the search box.
+  const visibleRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = (rows ?? []).slice().sort((a, b) => {
+      const an = String((a as unknown as Record<string, unknown>)[descKey] ?? "").toLowerCase();
+      const bn = String((b as unknown as Record<string, unknown>)[descKey] ?? "").toLowerCase();
+      return an.localeCompare(bn, "ms");
+    });
+    if (!q) return list;
+    return list.filter((r) => {
+      const desc = String((r as unknown as Record<string, unknown>)[descKey] ?? "").toLowerCase();
+      const file = (r.namaFail ?? "").toLowerCase();
+      return desc.includes(q) || file.includes(q);
+    });
+  }, [rows, descKey, query]);
 
   const openCreate = () => {
     setEditing(null);
@@ -586,11 +604,20 @@ function TemplateSection({
             <TemplateFieldsPanel />
           </div>
         </details>
+        <div className="relative mb-3">
+          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari templat..."
+            className="pl-8"
+          />
+        </div>
         {loading ? (
           <Skeleton className="h-24 w-full" />
         ) : (
           <div className="divide-y divide-border rounded-md border">
-            {(rows ?? []).map((row) => (
+            {visibleRows.map((row) => (
               <div key={row.ID} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                 <div className="flex min-w-0 flex-col">
                   <span className="font-medium">
@@ -627,8 +654,10 @@ function TemplateSection({
                 </div>
               </div>
             ))}
-            {(rows ?? []).length === 0 && (
-              <p className="px-3 py-4 text-sm text-muted-foreground">Tiada rekod.</p>
+            {visibleRows.length === 0 && (
+              <p className="px-3 py-4 text-sm text-muted-foreground">
+                {query.trim() ? "Tiada padanan." : "Tiada rekod."}
+              </p>
             )}
           </div>
         )}
