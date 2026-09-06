@@ -30,6 +30,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -159,21 +160,25 @@ export function DataTable<TData, TValue>({
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>Tunjuk Lajur</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {hideableColumns.map((column) => {
-                const label =
-                  typeof column.columnDef.header === "string"
-                    ? column.columnDef.header
-                    : column.id;
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {label}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
+              <DropdownMenuGroup>
+                {hideableColumns.map((column) => {
+                  const label =
+                    typeof column.columnDef.header === "string"
+                      ? column.columnDef.header
+                      : column.id;
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {label}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
