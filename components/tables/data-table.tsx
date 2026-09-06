@@ -289,7 +289,7 @@ function ExpandableRow<TData>({
       </TableRow>
       {isExpanded && renderDetailPanel && (
         <TableRow className="bg-muted/30 hover:bg-muted/30">
-          <TableCell colSpan={colSpan} className="p-4">
+          <TableCell colSpan={colSpan} className="p-4 whitespace-normal break-words">
             {renderDetailPanel(row.original)}
           </TableCell>
         </TableRow>

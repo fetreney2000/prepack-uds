@@ -44,9 +44,9 @@ function renderUdsRekodLabelDetail(row: UdsRekodLabel) {
   return (
     <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm">
       {fields.map((f) => (
-        <div key={f.label}>
+        <div key={f.label} className="min-w-0">
           <dt className="text-muted-foreground">{f.label}</dt>
-          <dd className="font-medium">{f.value ?? "—"}</dd>
+          <dd className="font-medium break-words">{f.value ?? "—"}</dd>
         </div>
       ))}
     </dl>
