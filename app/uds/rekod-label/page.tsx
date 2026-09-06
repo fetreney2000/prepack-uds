@@ -28,7 +28,6 @@ import { deleteUdsRekodLabel } from "@/app/actions/uds";
 import { Plus, Printer, Pencil, Trash2 } from "lucide-react";
 
 const udsRekodLabelColumnVisibility: VisibilityState = {
-  Kekuatan: false,
   Kelompok: false,
   Luput: false,
   Penyedia: false,
