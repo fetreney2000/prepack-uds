@@ -27,9 +27,9 @@ import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 const ubatColumnVisibility: VisibilityState = {
-  deskripsiPrabungkus: false,
   unitSKU: false,
   saizPek: false,
+  harga: false,
 };
 
 function renderUbatDetail(row: UbatRecord) {
