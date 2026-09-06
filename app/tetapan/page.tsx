@@ -131,10 +131,10 @@ export default function TetapanPage() {
   // Auto-open the password prompt on first load.
   useEffect(() => {
     if (!authenticated && !passwordOpen) {
-      const t = setTimeout(() => setPasswordOpen(true), 300);
-      return () => clearTimeout(t);
+      setPasswordOpen(true);
     }
-  }, [authenticated, passwordOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <PageShell>
