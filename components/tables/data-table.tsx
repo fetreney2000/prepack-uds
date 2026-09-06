@@ -158,9 +158,9 @@ export function DataTable<TData, TValue>({
               <span className="hidden sm:inline ml-1">Lajur</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Tunjuk Lajur</DropdownMenuLabel>
-              <DropdownMenuSeparator />
               <DropdownMenuGroup>
+                <DropdownMenuLabel>Tunjuk Lajur</DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 {hideableColumns.map((column) => {
                   const label =
                     typeof column.columnDef.header === "string"
