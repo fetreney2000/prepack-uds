@@ -36,16 +36,16 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
 const mainLinks = [
-  { href: "/dashboard", label: "Papan Pemuka", icon: LayoutDashboard },
-  { href: "/rekod-prabungkus", label: "Rekod Prabungkus", icon: FileText },
-  { href: "/senarai-ubat", label: "Senarai Ubat", icon: Pill },
-  { href: "/laporan", label: "Laporan", icon: BarChart3 },
+  { href: "/dashboard", label: "Papan Pemuka", icon: LayoutDashboard, color: "text-blue-500" },
+  { href: "/rekod-prabungkus", label: "Rekod Prabungkus", icon: FileText, color: "text-blue-600" },
+  { href: "/senarai-ubat", label: "Senarai Ubat", icon: Pill, color: "text-emerald-500" },
+  { href: "/laporan", label: "Laporan", icon: BarChart3, color: "text-indigo-500" },
 ];
 
 const udsLinks = [
-  { href: "/uds/rekod-label", label: "Senarai Rekod UDS", icon: Printer },
-  { href: "/uds/senarai-ubat", label: "Senarai Ubat UDS", icon: PillBottle },
-  { href: "/uds/laporan", label: "Laporan UDS", icon: BarChart3 },
+  { href: "/uds/rekod-label", label: "Senarai Rekod UDS", icon: Printer, color: "text-teal-500" },
+  { href: "/uds/senarai-ubat", label: "Senarai Ubat UDS", icon: PillBottle, color: "text-orange-500" },
+  { href: "/uds/laporan", label: "Laporan UDS", icon: BarChart3, color: "text-indigo-500" },
 ];
 
 function MobileNavLink({
@@ -53,7 +53,7 @@ function MobileNavLink({
   pathname,
   onClose,
 }: {
-  link: { href: string; label: string; icon: LucideIcon };
+  link: { href: string; label: string; icon: LucideIcon; color?: string };
   pathname: string;
   onClose: () => void;
 }) {
@@ -70,7 +70,7 @@ function MobileNavLink({
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className={cn("h-4 w-4 shrink-0", link.color)} />
       {link.label}
     </Link>
   );
@@ -87,7 +87,7 @@ export function Navigation() {
           href="/dashboard"
           className="flex items-center gap-2 font-semibold shrink-0"
         >
-          <Tags className="h-5 w-5 text-primary" />
+          <Tags className="h-5 w-5 text-purple-500" />
           <span>Prabungkus & UDS</span>
         </Link>
 
@@ -107,7 +107,7 @@ export function Navigation() {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={cn("h-4 w-4 shrink-0", link.color)} />
                 {link.label}
               </Link>
             );
@@ -130,7 +130,7 @@ export function Navigation() {
                               href={link.href}
                               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
                             >
-                              <Icon className="h-4 w-4" />
+                              <Icon className={cn("h-4 w-4", link.color)} />
                               {link.label}
                             </Link>
                           </li>
@@ -152,7 +152,7 @@ export function Navigation() {
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            <Settings className="h-4 w-4 shrink-0" />
+            <Settings className="h-4 w-4 shrink-0 text-slate-500" />
             Tetapan
           </Link>
 
@@ -168,12 +168,12 @@ export function Navigation() {
                 <Button variant="ghost" size="icon" aria-label="Buka menu" />
               }
             >
-              <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5 text-slate-500" />
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0">
               <SheetHeader className="border-b px-4 py-3">
                 <SheetTitle className="flex items-center gap-2 text-base">
-                  <Tags className="h-5 w-5 text-primary" />
+                  <Tags className="h-5 w-5 text-purple-500" />
                   Prabungkus & UDS
                 </SheetTitle>
               </SheetHeader>
@@ -209,6 +209,7 @@ export function Navigation() {
                     href: "/tetapan",
                     label: "Tetapan",
                     icon: Settings,
+                    color: "text-slate-500",
                   }}
                   pathname={pathname}
                   onClose={() => setMobileOpen(false)}

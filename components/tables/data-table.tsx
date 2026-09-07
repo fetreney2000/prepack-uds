@@ -15,7 +15,7 @@ import {
   type VisibilityState,
   type Header,
 } from "@tanstack/react-table";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -54,6 +54,7 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number;
   initialColumnVisibility?: VisibilityState;
   renderDetailPanel?: (row: TData) => React.ReactNode;
+  storageKey?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -63,14 +64,29 @@ export function DataTable<TData, TValue>({
   pageSize = 50,
   initialColumnVisibility = {},
   renderDetailPanel,
+  storageKey,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    initialColumnVisibility,
-  );
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    if (typeof window !== "undefined" && storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return initialColumnVisibility;
+  });
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(columnVisibility));
+      } catch {}
+    }
+  }, [columnVisibility, storageKey]);
 
   const toggleRow = useCallback((rowId: string) => {
     setExpanded((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -138,7 +154,7 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-emerald-500" />
           <Input
             placeholder={searchPlaceholder}
             value={globalFilter ?? ""}
@@ -154,7 +170,7 @@ export function DataTable<TData, TValue>({
                 <Button variant="outline" size="sm" aria-label="Tunjuk/sembunyi lajur" />
               }
             >
-              <SlidersHorizontal className="h-4 w-4" />
+              <SlidersHorizontal className="h-4 w-4 text-slate-500" />
               <span className="hidden sm:inline ml-1">Lajur</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

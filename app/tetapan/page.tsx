@@ -143,7 +143,7 @@ export default function TetapanPage() {
         <h1 className="text-2xl font-semibold">Tetapan</h1>
         {authenticated && (
           <Badge variant="secondary">
-            <ShieldCheck className="size-3 mr-1" /> Disahkan
+            <ShieldCheck className="size-3 mr-1 text-emerald-500" /> Disahkan
           </Badge>
         )}
       </div>
@@ -151,12 +151,12 @@ export default function TetapanPage() {
       {!authenticated ? (
         <Card>
           <CardContent className="py-10 flex flex-col items-center gap-3 text-center">
-            <Lock className="size-8 text-muted-foreground" />
+            <Lock className="size-8 text-amber-500" />
             <p className="text-muted-foreground">
               Tetapan sistem dilindungi kata laluan. Sila sahkan untuk meneruskan.
             </p>
             <Button onClick={() => setPasswordOpen(true)}>
-              <Lock className="size-4 mr-1" /> Buka Tetapan
+              <Lock className="size-4 mr-1 text-amber-500" /> Buka Tetapan
             </Button>
           </CardContent>
         </Card>
@@ -165,7 +165,7 @@ export default function TetapanPage() {
           <LookupSection
             title="Kategori Ubat"
             desc="Kategori dengan prefix ID Prabungkus"
-            icon={<Tag className="size-4" />}
+            icon={<Tag className="size-4 text-violet-500" />}
             rows={lookups?.kategori}
             loading={!lookups}
             columns={["nama", "prefix"]}
@@ -175,7 +175,7 @@ export default function TetapanPage() {
           <LookupSection
             title="Unit SKU"
             desc="Unit stok untuk ubat"
-            icon={<Boxes className="size-4" />}
+            icon={<Boxes className="size-4 text-violet-500" />}
             rows={lookups?.unitSku}
             loading={!lookups}
             columns={["nama"]}
@@ -185,7 +185,7 @@ export default function TetapanPage() {
           <LookupSection
             title="Unit PKU"
             desc="Unit pek untuk ubat"
-            icon={<Boxes className="size-4" />}
+            icon={<Boxes className="size-4 text-violet-500" />}
             rows={lookups?.unitPku}
             loading={!lookups}
             columns={["nama"]}
@@ -195,7 +195,7 @@ export default function TetapanPage() {
           <TemplateSection
             title="Jenis Label"
             desc="Template label (.docx) — muat turun, sunting di Word, muat naik semula."
-            icon={<FileText className="size-4" />}
+            icon={<FileText className="size-4 text-blue-500" />}
             rows={lookups?.label}
             loading={!lookups}
             onSaved={refresh}
@@ -204,7 +204,7 @@ export default function TetapanPage() {
           <TemplateSection
             title="Jenis Worksheet"
             desc="Template kertas kerja (.docx) — muat turun, sunting di Word, muat naik semula."
-            icon={<FileText className="size-4" />}
+            icon={<FileText className="size-4 text-blue-500" />}
             rows={lookups?.worksheet}
             loading={!lookups}
             onSaved={refresh}
@@ -362,7 +362,7 @@ function LookupSection({
             <CardTitle>{title}</CardTitle>
           </div>
           <Button size="sm" variant="outline" onClick={openCreate}>
-            <Plus className="size-3 mr-1" /> Tambah
+            <Plus className="size-3 mr-1 text-emerald-500" /> Tambah
           </Button>
         </div>
         <CardDescription>{desc}</CardDescription>
@@ -387,7 +387,7 @@ function LookupSection({
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Button size="icon-xs" variant="ghost" onClick={() => openEdit(row)}>
-                    <Pencil className="size-3" />
+                    <Pencil className="size-3 text-sky-500" />
                   </Button>
                   <Button size="icon-xs" variant="ghost" onClick={() => handleDelete(row)}>
                     <Trash2 className="size-3 text-destructive" />
@@ -590,7 +590,7 @@ function TemplateSection({
             <CardTitle>{title}</CardTitle>
           </div>
           <Button size="sm" variant="outline" onClick={openCreate}>
-            <Plus className="size-3 mr-1" /> Tambah
+            <Plus className="size-3 mr-1 text-emerald-500" /> Tambah
           </Button>
         </div>
         <CardDescription>{desc}</CardDescription>
@@ -605,7 +605,7 @@ function TemplateSection({
           </div>
         </details>
         <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-2.5 size-4 text-emerald-500" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -632,7 +632,7 @@ function TemplateSection({
                     onClick={() => download(row)}
                     aria-label="Muat turun templat"
                   >
-                    <Download className="size-3" />
+                    <Download className="size-3 text-green-500" />
                   </Button>
                   <ReplaceButton onFile={(f) => handleReplace(row, f)} />
                   <Button
@@ -641,7 +641,7 @@ function TemplateSection({
                     onClick={() => openEdit(row)}
                     aria-label="Sunting deskripsi"
                   >
-                    <Pencil className="size-3" />
+                    <Pencil className="size-3 text-sky-500" />
                   </Button>
                   <Button
                     size="icon-xs"
@@ -776,7 +776,7 @@ function ReplaceButton({ onFile }: { onFile: (file: File) => void }) {
         onClick={() => inputRef.current?.click()}
         aria-label="Ganti fail templat"
       >
-        <Upload className="size-3" />
+        <Upload className="size-3 text-blue-500" />
       </Button>
     </>
   );
@@ -835,7 +835,7 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Hash className="size-4 text-muted-foreground" />
+          <Hash className="size-4 text-amber-500" />
           <CardTitle>Nombor Berurutan</CardTitle>
         </div>
         <CardDescription>Nombor berurutan Prabungkus (setahun).</CardDescription>
@@ -895,7 +895,7 @@ function ChangePasswordCard() {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <KeyRound className="size-4 text-muted-foreground" />
+          <KeyRound className="size-4 text-amber-500" />
           <CardTitle>Tukar Kata Laluan</CardTitle>
         </div>
         <CardDescription>Kata laluan baharu minimum 6 aksara.</CardDescription>

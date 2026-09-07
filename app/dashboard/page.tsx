@@ -45,19 +45,19 @@ export default function DashboardPage() {
         <StatCard
           title={`Jumlah Pek (${dashboard?.monthLabel ?? "..."} / YTD)`}
           value={dashboard ? `${formatNum(dashboard.currentMonth.totalPek)} / ${formatNum(dashboard.ytd.totalPek)}` : null}
-          icon={<Package className="h-5 w-5" />}
+          icon={<Package className="h-5 w-5 text-amber-500" />}
           loading={isLoading}
         />
         <StatCard
           title={`Kertas Kerja (${dashboard?.monthLabel ?? "..."} / YTD)`}
           value={dashboard ? `${formatNum(dashboard.currentMonth.totalWorksheet)} / ${formatNum(dashboard.ytd.totalWorksheet)}` : null}
-          icon={<FileText className="h-5 w-5" />}
+          icon={<FileText className="h-5 w-5 text-blue-500" />}
           loading={isLoading}
         />
         <StatCard
           title={`Jenis Ubat (${dashboard?.monthLabel ?? "..."} / YTD)`}
           value={dashboard ? `${formatNum(dashboard.currentMonth.totalJenisUbat)} / ${formatNum(dashboard.ytd.totalJenisUbat)}` : null}
-          icon={<Pill className="h-5 w-5" />}
+          icon={<Pill className="h-5 w-5 text-emerald-500" />}
           loading={isLoading}
         />
       </div>

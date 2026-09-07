@@ -178,12 +178,12 @@ export default function UdsLabelPrintPage() {
             aria-label="Kembali"
             onClick={() => router.push("/uds/rekod-label")}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-slate-500" />
           </Button>
           <h1 className="text-2xl font-semibold">Cetak Label UDS</h1>
         </div>
         <Button onClick={handlePrint} disabled={blockPrint}>
-          <Printer className="h-4 w-4" />
+          <Printer className="h-4 w-4 text-teal-500" />
           Cetak
         </Button>
       </div>

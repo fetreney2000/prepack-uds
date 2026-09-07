@@ -72,7 +72,7 @@ export default function UdsSenaraiUbatPage() {
               aria-label="Sunting ubat"
               onClick={() => setEditing(row.original)}
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-4 w-4 text-sky-500" />
             </Button>
             <Button
               variant="ghost"
@@ -94,7 +94,7 @@ export default function UdsSenaraiUbatPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Ubat UDS</h1>
         <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 text-emerald-500" />
           Tambah Ubat
         </Button>
       </div>
@@ -111,7 +111,7 @@ export default function UdsSenaraiUbatPage() {
           <Skeleton className="h-64 w-full" />
         </div>
       ) : (
-        <DataTable columns={columns} data={data ?? []} searchPlaceholder="Cari nama ubat..." />
+        <DataTable columns={columns} data={data ?? []} searchPlaceholder="Cari nama ubat..." storageKey="dt:uds-senarai-ubat" />
       )}
 
       <UdsUbatForm open={createOpen} onOpenChange={setCreateOpen} />

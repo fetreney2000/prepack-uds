@@ -125,7 +125,7 @@ export default function UdsRekodLabelPage() {
               aria-label="Cetak label"
               render={<Link href={`/uds/rekod-label/${row.original.ID}/print`} />}
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="h-4 w-4 text-teal-500" />
             </Button>
             <Button
               variant="ghost"
@@ -133,7 +133,7 @@ export default function UdsRekodLabelPage() {
               aria-label="Sunting rekod"
               onClick={() => setEditing(row.original)}
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-4 w-4 text-sky-500" />
             </Button>
             <Button
               variant="ghost"
@@ -155,7 +155,7 @@ export default function UdsRekodLabelPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Senarai Rekod UDS</h1>
         <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 text-emerald-500" />
           Tambah Rekod
         </Button>
       </div>
@@ -178,6 +178,7 @@ export default function UdsRekodLabelPage() {
           searchPlaceholder="Cari rujukan, nama ubat, atau penyedia..."
           initialColumnVisibility={udsRekodLabelColumnVisibility}
           renderDetailPanel={renderUdsRekodLabelDetail}
+          storageKey="dt:uds-rekod-label"
         />
       )}
 

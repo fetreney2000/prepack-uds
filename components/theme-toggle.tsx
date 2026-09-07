@@ -19,7 +19,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <Button variant="ghost" size="icon" aria-label="Tukar tema">
-        <Sun className="h-4 w-4" />
+        <Sun className="h-4 w-4 text-yellow-500" />
       </Button>
     );
   }
@@ -34,7 +34,7 @@ export function ThemeToggle() {
       title={isDark ? "Mod terang" : "Mod gelap"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {isDark ? <Sun className="h-4 w-4 text-yellow-500" /> : <Moon className="h-4 w-4 text-indigo-400" />}
     </Button>
   );
 }

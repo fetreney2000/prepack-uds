@@ -163,11 +163,11 @@ export default function RekodPrabungkusPage() {
                 <Button variant="ghost" size="icon" aria-label="Tindakan" />
               }
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="h-4 w-4 text-slate-400" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setEditing(row.original)}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <Pencil className="mr-2 h-4 w-4 text-sky-500" />
                 Sunting
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setDeleting(row.original)}>
@@ -178,13 +178,13 @@ export default function RekodPrabungkusPage() {
               <DropdownMenuItem
                 onClick={() => downloadDocument("worksheet", row.original)}
               >
-                <Printer className="mr-2 h-4 w-4" />
+                <Printer className="mr-2 h-4 w-4 text-teal-500" />
                 Kertas Kerja
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => downloadDocument("label", row.original)}
               >
-                <FileText className="mr-2 h-4 w-4" />
+                <FileText className="mr-2 h-4 w-4 text-blue-500" />
                 Label
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -200,7 +200,7 @@ export default function RekodPrabungkusPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Rekod Prabungkus</h1>
         <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 text-emerald-500" />
           Tambah Rekod
         </Button>
       </div>
@@ -223,6 +223,7 @@ export default function RekodPrabungkusPage() {
           searchPlaceholder="Cari nama ubat, ID, atau deskripsi..."
           initialColumnVisibility={prabungkusColumnVisibility}
           renderDetailPanel={renderPrabungkusDetail}
+          storageKey="dt:rekod-prabungkus"
         />
       )}
 
