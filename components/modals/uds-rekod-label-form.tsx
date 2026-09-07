@@ -30,6 +30,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parse } from "date-fns";
+import { startOfYear, endOfYear, addYears } from "date-fns";
 import { useUdsUbatList, type UdsUbat, type UdsRekodLabel } from "@/lib/queries";
 import { createUdsRekodLabel, updateUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
 import { todayInKl } from "@/lib/format";
@@ -246,6 +247,9 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
                     mode="single"
                     selected={selectedLuput}
                     onSelect={handleLuputSelect}
+                    captionLayout="dropdown"
+                    startMonth={startOfYear(addYears(new Date(), -1))}
+                    endMonth={endOfYear(addYears(new Date(), 5))}
                   />
                 </PopoverContent>
               </Popover>
