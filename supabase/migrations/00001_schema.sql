@@ -490,7 +490,7 @@ begin
   perform bump_prepack_counter(v_year, v_next);
 
   select row_to_json(t) into v_row from (
-    select "ID", idubat, namaubat, tarikh, idprabungkus, namadagangan,
+    select "ID", idubat, namaubat, tarikh, idprabungkus as "idPrabungkus", namadagangan,
       nomborkelompok, tarikhluputasal, tarikhluputbaharu, pengilang,
       nombormal, kuantitiuntukdiprabungkus, saizpek, deskripsipek,
       hargasetiappek, jumlahpekdihasilkan, baki, arahanTambahan
