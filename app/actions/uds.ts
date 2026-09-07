@@ -37,14 +37,14 @@ export async function createUdsRekodLabel(
   // Server discards any client-supplied Rujukan; atomic reserve + insert.
   const { data: row, error } = await supabase.rpc("create_uds_label", {
     p_tarikh: normalized.Tarikh,
-    p_namaUbat: normalized.NamaUbat,
+    p_namaubat: normalized.NamaUbat,
     p_kekuatan: normalized.Kekuatan,
     p_kelompok: normalized.Kelompok,
     p_luput: normalized.Luput,
     p_kuantiti: normalized.Kuantiti,
     p_penyedia: normalized.Penyedia,
     p_luputnormalized: normalized.LuputNormalized,
-    p_namaUbat_id: normalized.NamaUbatID,
+    p_namaubat_id: normalized.NamaUbatID,
   });
 
   if (error) return { ok: false, error: error.message };
