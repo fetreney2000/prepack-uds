@@ -10,8 +10,8 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
-  title: "Sistem Pengurusan Prabungkus Ubat",
-  description: "Sistem Pengurusan Prabungkus Ubat — Jabatan Farmasi, Hospital Keningau",
+  title: "Sistem Prabungkus & UDS Jabatan Farmasi Hospital Keningau",
+  description: "Sistem Pengurusan Prabungkus & Ubat Dalam Sachet — Jabatan Farmasi, Hospital Keningau",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

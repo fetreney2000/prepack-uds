@@ -30,7 +30,6 @@ import { Plus, Printer, Pencil, Trash2 } from "lucide-react";
 const udsRekodLabelColumnVisibility: VisibilityState = {
   Kelompok: false,
   Luput: false,
-  Penyedia: false,
 };
 
 function renderUdsRekodLabelDetail(row: UdsRekodLabel) {

@@ -18,7 +18,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="ml-auto" aria-label="Tukar tema">
+      <Button variant="ghost" size="icon" aria-label="Tukar tema">
         <Sun className="h-4 w-4" />
       </Button>
     );
@@ -30,7 +30,6 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      className="ml-auto"
       aria-label={isDark ? "Tukar ke mod terang" : "Tukar ke mod gelap"}
       title={isDark ? "Mod terang" : "Mod gelap"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
