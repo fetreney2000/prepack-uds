@@ -114,7 +114,7 @@ export async function POST(
     .from(TEMPLATE_BUCKET)
     .upload(key, prepared.buffer as Uint8Array, {
       contentType: DOCX_CONTENT_TYPE,
-      upsert: false,
+      upsert: true,
     });
   if (uploadErr) {
     await supabase.from(table).delete().eq("ID", (inserted as { ID: number }).ID);
