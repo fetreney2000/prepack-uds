@@ -32,6 +32,7 @@ import {
   updateWorksheetType,
   deleteWorksheetType,
   updateRunningNumber,
+  updateUdsRunningNumber,
 } from "@/app/actions/settings";
 import { verifyAdminPassword, changeAdminPassword } from "@/app/actions/auth";
 import {
@@ -211,6 +212,7 @@ export default function TetapanPage() {
             kind="worksheet"
           />
           <RunningNumberCard onSaved={refresh} />
+          <UdsRunningNumberCard onSaved={refresh} />
           <ChangePasswordCard />
         </div>
       )}
@@ -855,6 +857,84 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
             <Label htmlFor="rn-value">Nombor Seterusnya</Label>
             <Input
               id="rn-value"
+              type="number"
+              value={value}
+              disabled={loading}
+              onChange={(e) => setValue(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button onClick={handleSave}>Simpan</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------- UDS running number ----------
+
+function UdsRunningNumberCard({ onSaved }: { onSaved: () => void }) {
+  const [year, setYear] = useState(currentYear());
+  const [value, setValue] = useState("1");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("tblsystemsettings")
+        .select("settingvalue")
+        .eq("settingkey", `running_number_uds_${year}`)
+        .maybeSingle();
+      if (!cancelled) {
+        setValue(data?.settingvalue ?? "1");
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [year]);
+
+  const handleSave = async () => {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      toast.error("Nilai mesti integer >= 1.");
+      return;
+    }
+    const res = await updateUdsRunningNumber(year, parsed);
+    if (res.ok) {
+      toast.success(`Nombor berurutan UDS ${year} disimpan.`);
+      onSaved();
+    } else {
+      toast.error(res.error ?? "Gagal menyimpan.");
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Hash className="size-4 text-amber-500" />
+          <CardTitle>Nombor Berurutan UDS</CardTitle>
+        </div>
+        <CardDescription>Nombor berurutan UDS Label (setahun).</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="uds-rn-year">Tahun</Label>
+            <Input
+              id="uds-rn-year"
+              type="number"
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value, 10) || currentYear())}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="uds-rn-value">Nombor Seterusnya</Label>
+            <Input
+              id="uds-rn-value"
               type="number"
               value={value}
               disabled={loading}

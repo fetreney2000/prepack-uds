@@ -202,6 +202,47 @@ export async function updateRunningNumber(
 }
 
 /**
+ * Update UDS running number for a year. Validates against the highest
+ * existing UDS Rujukan to prevent collisions.
+ */
+export async function updateUdsRunningNumber(
+  year: number,
+  value: number,
+): Promise<ActionResult<{ highest: number }>> {
+  const parsed = runningNumberInputSchema.safeParse({ year, value });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Input tidak sah." };
+  }
+  const supabase = createAdminClient();
+
+  const { data: highest, error: highErr } = await supabase.rpc(
+    "highest_uds_number",
+    { p_year: year },
+  );
+  if (highErr) return { ok: false, error: highErr.message };
+  const maxNumber: number = highest ?? 0;
+
+  if (value <= maxNumber) {
+    return {
+      ok: false,
+      error: `Nilai nombor berurutan mesti melebihi nombor tertinggi yang digunakan (${maxNumber}).`,
+      data: { highest: maxNumber },
+    };
+  }
+
+  const { error } = await supabase
+    .from("tblsystemsettings")
+    .upsert(
+      { settingkey: `running_number_uds_${year}`, settingvalue: String(value) },
+      { onConflict: "settingkey" },
+    );
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/tetapan");
+  return { ok: true, data: { highest: maxNumber } };
+}
+
+/**
  * Read the current running number for a year (default 1 if absent).
  */
 export async function getRunningNumber(year: number): Promise<ActionResult<number>> {

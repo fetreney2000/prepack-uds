@@ -555,6 +555,21 @@ as $$
     and substring(idprabungkus from 9 for 2) = lpad((p_year % 100)::text, 2, '0');
 $$;
 
+-- Highest used UDS running number for a given year (admin validation)
+create or replace function public.highest_uds_number(p_year integer)
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  select coalesce(max(
+    substring("Rujukan" from 5 for 4)::integer
+  ), 0)
+  from uds.tblrekodlabel
+  where "Rujukan" ~ '^UDS-[0-9]{4}/[0-9]{2}$'
+    and substring("Rujukan" from 10 for 2) = lpad((p_year % 100)::text, 2, '0');
+$$;
+
 -- UDS: atomic create with reserved UDS-NNNN/YY
 create or replace function public.create_uds_label(
   p_tarikh text,
