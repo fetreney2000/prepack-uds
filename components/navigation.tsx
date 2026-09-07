@@ -43,7 +43,7 @@ const mainLinks = [
 ];
 
 const udsLinks = [
-  { href: "/uds/rekod-label", label: "Senarai Rekod Label", icon: Printer },
+  { href: "/uds/rekod-label", label: "Senarai Rekod UDS", icon: Printer },
   { href: "/uds/senarai-ubat", label: "Senarai Ubat UDS", icon: PillBottle },
   { href: "/uds/laporan", label: "Laporan UDS", icon: BarChart3 },
 ];
