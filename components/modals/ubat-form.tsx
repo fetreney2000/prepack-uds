@@ -117,7 +117,7 @@ const STEPS: StepDef[] = [
     title: "Pengilang & Jangka Hayat",
     label: "Pengilang",
     description:
-      "Maklumat pengilang, nombor pendaftaran MAL, dan tempoh hayat ubat.",
+      "Maklumat pengilang, nombor pendaftaran MAL, dan tempoh hayat ubat. Jangka hayat 0 bermaksud luput ikut tarikh luput pembungkusan asal.",
   },
   {
     title: "Arahan & Templat",
@@ -255,7 +255,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       case "harga":
         return `RM ${parseFloat(v).toFixed(2)}`;
       case "jangkaHayat":
-        return `${v} hari`;
+        return v === "0" ? "0 hari (ikut tarikh luput asal)" : `${v} hari`;
       default:
         return v;
     }
@@ -425,6 +425,9 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
                 value={form.jangkaHayat}
                 onChange={set("jangkaHayat")}
               />
+              <p className="text-xs text-muted-foreground">
+                Isi 0 atau kosongkan jika luput ikut tarikh luput pembungkusan asal.
+              </p>
             </div>
           </div>
         );
