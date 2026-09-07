@@ -255,7 +255,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       case "harga":
         return `RM ${parseFloat(v).toFixed(2)}`;
       case "jangkaHayat":
-        return `${v} bulan`;
+        return `${v} hari`;
       default:
         return v;
     }
@@ -416,7 +416,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ub-hayat">Jangka Hayat (bulan)</Label>
+              <Label htmlFor="ub-hayat">Jangka Hayat (Hari)</Label>
               <Input
                 id="ub-hayat"
                 type="number"

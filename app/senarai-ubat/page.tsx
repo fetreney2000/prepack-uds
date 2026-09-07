@@ -40,7 +40,7 @@ function renderUbatDetail(row: UbatRecord) {
     { label: "Saiz Pek", value: row.saizPek },
     { label: "Pengilang", value: row.pengilang },
     { label: "No. MAL", value: row.nomborMAL },
-    { label: "Jangka Hayat", value: row.jangkaHayat != null ? `${row.jangkaHayat} bulan` : null },
+    { label: "Jangka Hayat", value: row.jangkaHayat != null ? `${row.jangkaHayat} hari` : null },
     { label: "Arahan Tambahan", value: row.arahanTambahan },
   ];
   return (
