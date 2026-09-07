@@ -12,7 +12,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-AS$$
+AS $$
 declare
   v_prefix  text;
   v_year    integer;
