@@ -460,6 +460,12 @@ begin
     v_next := greatest(v_next, v_candidate);
   end loop;
 
+  -- Self-heal: reset the identity sequence to be above the highest existing ID
+  perform setval(
+    pg_get_serial_sequence('public.tblsenaraiprabungkus', 'ID'),
+    (select coalesce(max("ID"), 0) + 1 from public.tblsenaraiprabungkus)
+  );
+
   insert into public.tblsenaraiprabungkus (
     idubat, namaubat, tarikh, idprabungkus, namadagangan,
     nomborkelompok, tarikhluputasal, tarikhluputbaharu, pengilang,
