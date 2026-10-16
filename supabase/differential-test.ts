@@ -163,7 +163,7 @@ async function main() {
     while (uStmt.step()) {
       const r = uStmt.getAsObject();
       const yr = (r.yr as string) || "?";
-      const m = /^UDS-(\d{4})\//.exec(r.Rujukan as string);
+      const m = /^UDS-(\d+)\//.exec(r.Rujukan as string);
       if (m) {
         if (!uByYear.has(yr)) uByYear.set(yr, []);
         uByYear.get(yr)!.push(parseInt(m[1], 10));

@@ -141,7 +141,7 @@ async function main() {
     if (prabungkus) {
       const byYear: Record<string, number> = {};
       for (const r of prabungkus) {
-        const m = /^PP-(\d{4})\/(\d{2})-(.)$/.exec(r.idPrabungkus || "");
+        const m = /^PP-(\d+)\/(\d{2})-(.+)$/.exec(r.idPrabungkus || "");
         if (!m) continue;
         const year = r.tarikh ? r.tarikh.slice(0, 4) : "";
         if (!year) continue;
@@ -186,7 +186,7 @@ async function main() {
     if (rekod) {
       const byYear: Record<string, number> = {};
       for (const r of rekod) {
-        const m = /^UDS-(\d{4})\/(\d{2})$/.exec(r.Rujukan || "");
+        const m = /^UDS-(\d+)\/(\d{2})$/.exec(r.Rujukan || "");
         if (!m) continue;
         const year = r.Tarikh ? r.Tarikh.slice(0, 4) : "";
         if (!year) continue;

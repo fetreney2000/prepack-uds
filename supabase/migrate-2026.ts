@@ -292,14 +292,14 @@ async function main() {
   console.log("\n=== Setting year-scoped running numbers ===");
   const maxPrepack = Math.max(
     ...prabungkusRows.map((r) => {
-      const m = /^PP-(\d{4})\//.exec((r.idPrabungkus as string) || "");
+      const m = /^PP-(\d+)\//.exec((r.idPrabungkus as string) || "");
       return m ? parseInt(m[1], 10) : 0;
     }),
     0,
   );
   const maxUds = Math.max(
     ...rekodRows.map((r) => {
-      const m = /^UDS-(\d{4})\//.exec((r.Rujukan as string) || "");
+      const m = /^UDS-(\d+)\//.exec((r.Rujukan as string) || "");
       return m ? parseInt(m[1], 10) : 0;
     }),
     0,

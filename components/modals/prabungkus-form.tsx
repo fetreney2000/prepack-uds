@@ -127,7 +127,7 @@ export function PrabungkusForm({
   // embedded in the record's ID rather than blocking the edit entirely.
   const fallbackKategori = useMemo(() => {
     if (!editing) return "";
-    const m = /^PP-\d{4}\/\d{2}-(.+)$/.exec(editing.idPrabungkus);
+    const m = /^PP-(\d+)\/(\d{2})-(.+)$/.exec(editing.idPrabungkus);
     return m?.[1] || "X";
   }, [editing]);
 
