@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- Running-number / ID-reservation functions - consolidated patch
 --
 -- SUPERSEDES: fix_create_prabungkus.sql, fix_identity_sequence.sql,
@@ -209,7 +209,7 @@ begin
     nullif(p_ubat->>'deskripsiPek', ''),
     nullif((p_ubat->>'hargaSetiapPek')::double precision, null),
     nullif((p_ubat->>'jumlahPekDihasilkan')::integer, null),
-    nullif((p_ubat->>'baki')::integer, null),
+    nullif((p_ubat->>'baki')::double precision, null),
     nullif(p_ubat->>'arahanTambahan', '')
   );
 

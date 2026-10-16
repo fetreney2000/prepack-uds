@@ -46,7 +46,9 @@ export const prabungkusInputSchema = z.object({
   deskripsiPek: strOrNull,
   hargaSetiapPek: nonNegNumOrNull,
   jumlahPekDihasilkan: intOrNull,
-  baki: intOrNull,
+  // Fractional: a fractional pack size (e.g. 17.6) can leave a fractional
+  // remainder (e.g. 500 - 24 * 20.2 = 15.2).
+  baki: nonNegNumOrNull,
   arahanTambahan: strOrNull,
 });
 

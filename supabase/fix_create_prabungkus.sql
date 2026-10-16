@@ -1,4 +1,4 @@
-﻿-- !!! SUPERSEDED !!!
+-- !!! SUPERSEDED !!!
 -- Do NOT run this script. It restores bugs fixed in fix_running_numbers.sql
 -- (lpad() truncation -> infinite loop, setval off-by-one, missing counter lock).
 -- Kept only for history. Use supabase/fix_running_numbers.sql instead.

@@ -240,10 +240,9 @@ export function PrabungkusForm({
         toast.error("Kuantiti perlu integer >= 0.");
         return;
       }
-      // Saiz pek must be a whole number of units: a fractional size yields a
-      // fractional remainder, which the integer `baki` column cannot store.
-      if (saizPek !== null && (!Number.isInteger(saizPek) || saizPek < 0)) {
-        toast.error("Saiz pek perlu integer >= 0.");
+      // Fractional pack sizes are valid (e.g. 17.6) — only reject nonsense.
+      if (saizPek !== null && (!Number.isFinite(saizPek) || saizPek < 0)) {
+        toast.error("Saiz pek tidak sah.");
         return;
       }
       if (hargaSetiapPek !== null && (!Number.isFinite(hargaSetiapPek) || hargaSetiapPek < 0)) {

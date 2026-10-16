@@ -96,9 +96,9 @@ async function main() {
     }
 
     // pek/baki calculation matches stored values.
-    // NOTE: 32/603 records drift from the spec formula — legacy data
+    // NOTE: 32 records drift from the spec formula — legacy data
     // was computed at entry time with different inputs (e.g. saizPek=0
-    // yet stored jpd=100) or has float-precision artifacts. The spec
+    // yet stored jpd=100). The spec
     // formula (§4.3) is confirmed correct; drift is reported info-only.
     console.log("\n--- pek/baki calculation vs stored (info) ---");
     const pekStmt = p.prepare(
