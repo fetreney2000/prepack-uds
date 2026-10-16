@@ -17,15 +17,18 @@ import {
   udsYearlyReport,
   type UdsReportResult,
 } from "@/lib/uds-report-data";
-import { MALAY_MONTHS } from "@/lib/format";
+import { MALAY_MONTHS, todayInKl, currentYearInKl } from "@/lib/format";
 
 export default function UdsLaporanPage() {
   const { data: records, isLoading, isError, error } = useUdsRekodLabelList();
 
-  const now = new Date();
-  const [date, setDate] = useState(toInputDate(now));
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
-  const [year, setYear] = useState(String(now.getFullYear()));
+  // Defaults follow Asia/Kuala_Lumpur, not the browser timezone.
+  const todayIso = todayInKl();
+  const klMonth = parseInt(todayIso.slice(5, 7), 10);
+  const klYear = currentYearInKl();
+  const [date, setDate] = useState(todayIso);
+  const [month, setMonth] = useState(String(klMonth));
+  const [year, setYear] = useState(String(klYear));
 
   const all = useMemo(() => (records ? udsAllReport(records) : null), [records]);
   const daily = useMemo(
@@ -73,7 +76,7 @@ export default function UdsLaporanPage() {
 
           <TabsContent value="monthly" className="space-y-4">
             <div className="flex items-center gap-2">
-              <Select value={month} onValueChange={(v) => setMonth(v ?? String(now.getMonth() + 1))}>
+              <Select value={month} onValueChange={(v) => setMonth(v ?? String(klMonth))}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Bulan" />
                 </SelectTrigger>
@@ -85,12 +88,12 @@ export default function UdsLaporanPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={year} onValueChange={(v) => setYear(v ?? String(now.getFullYear()))}>
+              <Select value={year} onValueChange={(v) => setYear(v ?? String(klYear))}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Tahun" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getYearOptions(now.getFullYear()).map((y) => (
+                  {getYearOptions(klYear).map((y) => (
                     <SelectItem key={y} value={String(y)}>
                       {y}
                     </SelectItem>
@@ -107,12 +110,12 @@ export default function UdsLaporanPage() {
           </TabsContent>
 
           <TabsContent value="yearly" className="space-y-4">
-            <Select value={year} onValueChange={(v) => setYear(v ?? String(now.getFullYear()))}>
+            <Select value={year} onValueChange={(v) => setYear(v ?? String(klYear))}>
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Tahun" />
               </SelectTrigger>
               <SelectContent>
-                {getYearOptions(now.getFullYear()).map((y) => (
+                {getYearOptions(klYear).map((y) => (
                   <SelectItem key={y} value={String(y)}>
                     {y}
                   </SelectItem>
@@ -194,10 +197,6 @@ function UdsBreakdownTable({
       </CardContent>
     </Card>
   );
-}
-
-function toInputDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function getYearOptions(currentYear: number): number[] {

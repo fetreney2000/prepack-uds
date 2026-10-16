@@ -72,19 +72,33 @@ function renderPrabungkusDetail(row: PrabungkusRecord) {
   );
 }
 
-function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord) {
-  const url = `/api/document/${kind}/${record.ID}`;
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  toast.success(
+async function downloadDocument(kind: "worksheet" | "label", record: PrabungkusRecord) {
+  const label =
     kind === "worksheet"
-      ? `Kertas kerja ${record.idPrabungkus} sedang dimuat turun.`
-      : `Label ${record.idPrabungkus} sedang dimuat turun.`,
-  );
+      ? `Kertas kerja ${record.idPrabungkus}`
+      : `Label ${record.idPrabungkus}`;
+  try {
+    // Fetch first so a 404/500 can be reported instead of downloading an
+    // error payload behind a success toast.
+    const res = await fetch(`/api/document/${kind}/${record.ID}`);
+    if (!res.ok) {
+      toast.error(`Gagal menjana ${label}.`);
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    // Revoke after the browser has had a chance to start the download.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success(`${label} sedang dimuat turun.`);
+  } catch {
+    toast.error(`Gagal memuat turun ${label}.`);
+  }
 }
 
 export default function RekodPrabungkusPage() {
@@ -99,15 +113,21 @@ export default function RekodPrabungkusPage() {
   const handleDelete = async () => {
     if (!deleting) return;
     setDeleteBusy(true);
-    const res = await deletePrabungkus(deleting.ID);
-    setDeleteBusy(false);
-
-    if (res.ok) {
-      toast.success("Rekod dipadam.");
-      queryClient.invalidateQueries({ queryKey: ["prabungkus"] });
-      setDeleting(null);
-    } else {
-      toast.error(res.error ?? "Gagal memadam rekod.");
+    try {
+      const res = await deletePrabungkus(deleting.ID);
+      if (res.ok) {
+        toast.success("Rekod dipadam.");
+        queryClient.invalidateQueries({ queryKey: ["prabungkus"] });
+        setDeleting(null);
+      } else {
+        toast.error(res.error ?? "Gagal memadam rekod.");
+      }
+    } catch {
+      // Server actions can reject outright (network/exception), not just
+      // return { ok: false }.
+      toast.error("Gagal memadam rekod.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -224,6 +244,8 @@ export default function RekodPrabungkusPage() {
           initialColumnVisibility={prabungkusColumnVisibility}
           renderDetailPanel={renderPrabungkusDetail}
           storageKey="dt:rekod-prabungkus"
+          rowKey={(r) => String(r.ID)}
+          columnLabels={{ tarikh: "Tarikh", jumlahPekDihasilkan: "Jumlah Pek" }}
         />
       )}
 
@@ -238,7 +260,10 @@ export default function RekodPrabungkusPage() {
       {/* Delete confirmation */}
       <AlertDialog
         open={!!deleting}
-        onOpenChange={(v) => !v && setDeleting(null)}
+        onOpenChange={(v) => {
+          // Keep the dialog open while a delete is in flight.
+          if (!v && !deleteBusy) setDeleting(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

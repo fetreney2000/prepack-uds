@@ -15,8 +15,10 @@ const intOrNull = z
   .nullish()
   .transform((v) => v ?? null);
 
-const numOrNull = z
+// Non-negative variant for money/pack-size fields.
+const nonNegNumOrNull = z
   .number()
+  .min(0)
   .nullish()
   .transform((v) => v ?? null);
 
@@ -40,9 +42,9 @@ export const prabungkusInputSchema = z.object({
   pengilang: strOrNull,
   nomborMAL: strOrNull,
   kuantitiUntukDiprabungkus: intOrNull,
-  saizPek: numOrNull,
+  saizPek: nonNegNumOrNull,
   deskripsiPek: strOrNull,
-  hargaSetiapPek: numOrNull,
+  hargaSetiapPek: nonNegNumOrNull,
   jumlahPekDihasilkan: intOrNull,
   baki: intOrNull,
   arahanTambahan: strOrNull,
@@ -59,8 +61,8 @@ export const ubatInputSchema = z.object({
   kategoriUbat: z.string().trim().min(1, "Kategori diperlukan"),
   unitSKU: strOrNull,
   unitPKU: strOrNull,
-  harga: numOrNull,
-  saizPek: numOrNull,
+  harga: nonNegNumOrNull,
+  saizPek: nonNegNumOrNull,
   pengilang: strOrNull,
   nomborMAL: strOrNull,
   arahanTambahan: strOrNull,

@@ -8,15 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrabungkusList } from "@/lib/queries";
 import { computeDashboard } from "@/lib/dashboard-data";
-import { formatMonthName } from "@/lib/format";
+import { formatMonthName, todayInKl, currentYearInKl } from "@/lib/format";
 import { Package, FileText, Pill } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: records, isLoading, isError, error } = usePrabungkusList();
 
-  const now = useMemo(() => new Date(), []);
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+  // Asia/Kuala_Lumpur — the app's convention — not the browser timezone.
+  const nowIso = useMemo(() => todayInKl(), []);
+  const year = currentYearInKl();
+  const month = parseInt(nowIso.slice(5, 7), 10);
 
   const dashboard = useMemo(
     () => (records ? computeDashboard(records, year, month) : null),
@@ -65,7 +66,11 @@ export default function DashboardPage() {
       {/* 12-month table */}
       <Card>
         <CardHeader>
-          <CardTitle>Jadual Bulanan {year}</CardTitle>
+          <CardTitle>
+            Jadual Bulanan{" "}
+            {/* Prerendered at build time; the client renders its own date. */}
+            <span suppressHydrationWarning>{year}</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

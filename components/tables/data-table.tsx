@@ -55,6 +55,14 @@ interface DataTableProps<TData, TValue> {
   initialColumnVisibility?: VisibilityState;
   renderDetailPanel?: (row: TData) => React.ReactNode;
   storageKey?: string;
+  /**
+   * Stable identity for each row. Without it TanStack falls back to the
+   * row's array index, which makes expandable panels jump to a different
+   * record whenever a refetch re-orders the list.
+   */
+  rowKey?: (row: TData) => string;
+  /** Display labels for the column menu, keyed by column id. */
+  columnLabels?: Record<string, string>;
 }
 
 export function DataTable<TData, TValue>({
@@ -65,6 +73,8 @@ export function DataTable<TData, TValue>({
   initialColumnVisibility = {},
   renderDetailPanel,
   storageKey,
+  rowKey,
+  columnLabels,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -126,6 +136,7 @@ export function DataTable<TData, TValue>({
   const table = useReactTable({
     data,
     columns: allColumns,
+    getRowId: rowKey ? (row) => rowKey(row) : undefined,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -179,9 +190,10 @@ export function DataTable<TData, TValue>({
                 <DropdownMenuSeparator />
                 {hideableColumns.map((column) => {
                   const label =
-                    typeof column.columnDef.header === "string"
+                    columnLabels?.[column.id] ??
+                    (typeof column.columnDef.header === "string"
                       ? column.columnDef.header
-                      : column.id;
+                      : column.id);
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
@@ -266,7 +278,7 @@ export function DataTable<TData, TValue>({
           </Button>
           <span className="text-sm text-muted-foreground">
             Halaman {table.getState().pagination.pageIndex + 1} dari{" "}
-            {table.getPageCount()}
+            {Math.max(1, table.getPageCount())}
           </span>
           <Button
             variant="outline"
@@ -323,6 +335,12 @@ function SortableHeader<TData, TValue>({
   const sorted = header.column.getIsSorted();
 
   if (!canSort) {
+    return flexRender(header.column.columnDef.header, header.getContext());
+  }
+
+  // A function header renders its own sort control. Wrapping it in another
+  // <button> nests interactive elements and toggles the sort twice per click.
+  if (typeof header.column.columnDef.header === "function") {
     return flexRender(header.column.columnDef.header, header.getContext());
   }
 

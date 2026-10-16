@@ -62,15 +62,19 @@ export default function UdsRekodLabelPage() {
   const handleDelete = async () => {
     if (!deleting) return;
     setDeleteBusy(true);
-    const res = await deleteUdsRekodLabel(deleting.ID);
-    setDeleteBusy(false);
-    if (res.ok) {
-      toast.success("Rekod dipadam.");
-      queryClient.invalidateQueries({ queryKey: ["uds-rekod-label"] });
-      queryClient.invalidateQueries({ queryKey: ["uds-laporan"] });
-      setDeleting(null);
-    } else {
-      toast.error(res.error ?? "Gagal memadam rekod.");
+    try {
+      const res = await deleteUdsRekodLabel(deleting.ID);
+      if (res.ok) {
+        toast.success("Rekod dipadam.");
+        queryClient.invalidateQueries({ queryKey: ["uds-rekod-label"] });
+        setDeleting(null);
+      } else {
+        toast.error(res.error ?? "Gagal memadam rekod.");
+      }
+    } catch {
+      toast.error("Gagal memadam rekod.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -179,6 +183,7 @@ export default function UdsRekodLabelPage() {
           initialColumnVisibility={udsRekodLabelColumnVisibility}
           renderDetailPanel={renderUdsRekodLabelDetail}
           storageKey="dt:uds-rekod-label"
+          rowKey={(r) => String(r.ID)}
         />
       )}
 
@@ -192,7 +197,13 @@ export default function UdsRekodLabelPage() {
         editing={editing}
       />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(v) => {
+          // Keep the dialog open while a delete is in flight.
+          if (!v && !deleteBusy) setDeleting(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Padam Rekod?</AlertDialogTitle>

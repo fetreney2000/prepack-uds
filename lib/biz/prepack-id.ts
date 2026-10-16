@@ -55,7 +55,7 @@ export function buildPrepackId(prefix: string | null, runningNum: number, tarikh
  * Returns null if the id does not match the expected shape.
  */
 export function extractRunningNumber(idPrabungkus: string): number | null {
-  const m = /^PP-(\d{4})\//.exec(idPrabungkus);
+  const m = /^PP-(\d+)\//.exec(idPrabungkus);
   return m ? parseInt(m[1], 10) : null;
 }
 
@@ -67,7 +67,9 @@ export function highestUsedNumber(ids: string[], year: number): number {
   const frag = yearFragment(year);
   let max = 0;
   for (const id of ids) {
-    const m = /^PP-(\d{4})\/(\d{2})-(.)$/.exec(id);
+    // Accept 4+ digit numbers and any prefix length; the SQL side never
+    // truncates either, so a stricter pattern here would miss real IDs.
+    const m = /^PP-(\d+)\/(\d{2})-(.+)$/.exec(id);
     if (!m) continue;
     if (m[2] === frag) {
       const n = parseInt(m[1], 10);

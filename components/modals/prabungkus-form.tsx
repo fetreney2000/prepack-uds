@@ -50,7 +50,7 @@ interface Props {
 // ---------- Constants ----------
 
 const EMPTY = {
-  tarikh: today(),
+  tarikh: "",
   nomborKelompok: "",
   tarikhLuputAsal: "",
   kuantiti: "",
@@ -121,6 +121,16 @@ export function PrabungkusForm({
   // Effective ubat: selected in create mode, looked up in edit mode
   const effectiveUbo = editing ? editingUbo : ubo;
 
+  // Orphaned records (their medication has since been deleted) have no master
+  // to supply a category. `updatePrabungkus` never writes kategoriUbat — it is
+  // only used to mint the ID on create — so fall back to the prefix already
+  // embedded in the record's ID rather than blocking the edit entirely.
+  const fallbackKategori = useMemo(() => {
+    if (!editing) return "";
+    const m = /^PP-\d{4}\/\d{2}-(.+)$/.exec(editing.idPrabungkus);
+    return m?.[1] || "X";
+  }, [editing]);
+
   const set =
     (k: FormField) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -151,7 +161,7 @@ export function PrabungkusForm({
         setUbo(null);
         setPreview(editing.idPrabungkus);
       } else {
-        setForm(EMPTY);
+        setForm({ ...EMPTY, tarikh: today() });
         setUbo(null);
         setPreview(null);
       }
@@ -161,13 +171,13 @@ export function PrabungkusForm({
   // ---------- Computed values ----------
 
   const kuantiti =
-    form.kuantiti.trim() === "" ? null : parseInt(form.kuantiti, 10);
+    form.kuantiti.trim() === "" ? null : Number(form.kuantiti);
   const saizPek =
-    form.saizPek.trim() === "" ? null : parseFloat(form.saizPek);
+    form.saizPek.trim() === "" ? null : Number(form.saizPek);
   const hargaSetiapPek =
     form.hargaSetiapPek.trim() === ""
       ? null
-      : parseFloat(form.hargaSetiapPek);
+      : Number(form.hargaSetiapPek);
 
   const { jumlahPekDihasilkan, baki } = useMemo(
     () => calculatePekAndBaki(kuantiti, saizPek),
@@ -175,12 +185,23 @@ export function PrabungkusForm({
   );
 
   const tarikhLuputBaharu = useMemo(() => {
+    // When editing, keep the expiry already stored on the record while the
+    // inputs that produced it are unchanged. Otherwise saving an unrelated
+    // field would silently rewrite it from the medication master's *current*
+    // shelf life.
+    if (
+      editing &&
+      form.tarikh === (editing.tarikh ?? "") &&
+      form.tarikhLuputAsal === (editing.tarikhLuputAsal ?? "")
+    ) {
+      return editing.tarikhLuputBaharu;
+    }
     return calculateTarikhLuputBaharu(
       effectiveUbo?.jangkaHayat ?? 0,
       form.tarikh,
       form.tarikhLuputAsal || null,
     );
-  }, [effectiveUbo, form.tarikh, form.tarikhLuputAsal]);
+  }, [editing, effectiveUbo, form.tarikh, form.tarikhLuputAsal]);
 
   // Live ID preview (create mode only)
   useEffect(() => {
@@ -205,7 +226,7 @@ export function PrabungkusForm({
 
   const handleNext = () => {
     if (step === 0) {
-      if (!effectiveUbo) {
+      if (!effectiveUbo && !editing) {
         toast.error("Sila pilih ubat dari senarai.");
         return;
       }
@@ -215,15 +236,17 @@ export function PrabungkusForm({
       }
     }
     if (step === 2) {
-      if (kuantiti !== null && (isNaN(kuantiti) || kuantiti < 0)) {
+      if (kuantiti !== null && (!Number.isInteger(kuantiti) || kuantiti < 0)) {
         toast.error("Kuantiti perlu integer >= 0.");
         return;
       }
-      if (saizPek !== null && isNaN(saizPek)) {
-        toast.error("Saiz pek tidak sah.");
+      // Saiz pek must be a whole number of units: a fractional size yields a
+      // fractional remainder, which the integer `baki` column cannot store.
+      if (saizPek !== null && (!Number.isInteger(saizPek) || saizPek < 0)) {
+        toast.error("Saiz pek perlu integer >= 0.");
         return;
       }
-      if (hargaSetiapPek !== null && isNaN(hargaSetiapPek)) {
+      if (hargaSetiapPek !== null && (!Number.isFinite(hargaSetiapPek) || hargaSetiapPek < 0)) {
         toast.error("Harga setiap pek tidak sah.");
         return;
       }
@@ -234,21 +257,19 @@ export function PrabungkusForm({
   // ---------- Submit ----------
 
   const handleSubmit = async () => {
-    if (editing && !effectiveUbo) {
-      toast.error("Ubat berkaitan tidak dijumpai dalam senarai ubat.");
-      return;
-    }
     const payload: PrabungkusInput = {
       idUbat: editing ? editing.idUbat : ubo?.ID ?? null,
       namaUbat: editing ? editing.namaUbat : ubo?.namaUbat ?? "",
-      kategoriUbat: effectiveUbo?.kategoriUbat ?? "",
+      kategoriUbat: effectiveUbo?.kategoriUbat ?? fallbackKategori,
       tarikh: form.tarikh,
       namaDagangan: form.namaDagangan || null,
       nomborKelompok: form.nomborKelompok || null,
       tarikhLuputAsal: form.tarikhLuputAsal || null,
       tarikhLuputBaharu,
-      pengilang: effectiveUbo?.pengilang ?? null,
-      nomborMAL: effectiveUbo?.nomborMAL ?? null,
+      // Snapshot fields: when editing, keep the values stored on the record
+      // instead of overwriting them with the medication master's current data.
+      pengilang: editing ? editing.pengilang : ubo?.pengilang ?? null,
+      nomborMAL: editing ? editing.nomborMAL : ubo?.nomborMAL ?? null,
       kuantitiUntukDiprabungkus: kuantiti,
       saizPek,
       deskripsiPek: form.deskripsiPek || null,
@@ -280,11 +301,13 @@ export function PrabungkusForm({
   // ---------- Render helpers ----------
 
   const displayNamaUbat = editing ? editing.namaUbat : ubo?.namaUbat ?? null;
-  const displaykategoriUbat = effectiveUbo?.kategoriUbat ?? null;
+  const displaykategoriUbat =
+    effectiveUbo?.kategoriUbat ?? (editing ? fallbackKategori : null);
   const displayIdPrabungkus = editing ? editing.idPrabungkus : preview;
   const displayNamaDagangan = form.namaDagangan || effectiveUbo?.namaDagangan || null;
-  const displayPengilang = effectiveUbo?.pengilang ?? null;
-  const displayNomborMAL = effectiveUbo?.nomborMAL ?? null;
+  // Mirror the payload: the record's own snapshot wins over the live master.
+  const displayPengilang = editing ? editing.pengilang : ubo?.pengilang ?? null;
+  const displayNomborMAL = editing ? editing.nomborMAL : ubo?.nomborMAL ?? null;
 
   const formatReviewValue = (label: string, value: string | null | undefined): string => {
     if (value == null || value === "") return "—";

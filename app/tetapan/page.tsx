@@ -114,7 +114,11 @@ export default function TetapanPage() {
 
   const refresh = useCallback(() => {
     refetchLookups();
-    queryClient.invalidateQueries({ queryKey: ["tetapan"] });
+    // Invalidate the caches that depend on lookups. Note the keys are
+    // prefix-matched as whole array segments: `["tetapan"]` does NOT match
+    // `["tetapan-lookups"]`.
+    queryClient.invalidateQueries({ queryKey: ["tetapan-lookups"] });
+    queryClient.invalidateQueries({ queryKey: ["ubat-lookups"] });
   }, [refetchLookups, queryClient]);
 
   const handleVerify = async () => {
@@ -307,6 +311,8 @@ function LookupSection({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LookupRow | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -328,27 +334,45 @@ function LookupSection({
   };
 
   const handleSave = async () => {
-    const payload = { nama: form[columns[0]], prefix: form.prefix ?? null };
-    const res = editing
-      ? await updateLookup(table, editing.ID, payload)
-      : await createLookup(table, payload);
-    if (res.ok) {
-      toast.success("Disimpan.");
-      setDialogOpen(false);
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal menyimpan.");
+    // Guard against double-submit: the create action has no idempotency, so a
+    // second click would insert a duplicate lookup row.
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = { nama: form[columns[0]], prefix: form.prefix ?? null };
+      const res = editing
+        ? await updateLookup(table, editing.ID, payload)
+        : await createLookup(table, payload);
+      if (res.ok) {
+        toast.success("Disimpan.");
+        setDialogOpen(false);
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal menyimpan.");
+      }
+    } catch {
+      toast.error("Gagal menyimpan.");
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (row: LookupRow) => {
     if (!confirm(`Padam '${labelOf(row, columns)}'?`)) return;
-    const res = await deleteLookup(table, row.ID);
-    if (res.ok) {
-      toast.success("Dipadam.");
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal memadam.");
+    if (busyId != null) return;
+    setBusyId(row.ID);
+    try {
+      const res = await deleteLookup(table, row.ID);
+      if (res.ok) {
+        toast.success("Dipadam.");
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal memadam.");
+      }
+    } catch {
+      toast.error("Gagal memadam.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -424,7 +448,9 @@ function LookupSection({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSave}>Simpan</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Menyimpan..." : "Simpan"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -456,6 +482,7 @@ function TemplateSection({
   const [descValue, setDescValue] = useState("");
   const [createFile, setCreateFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
 
   const descKey = kind === "label" ? "deskripsiLabel" : "deskripsiWorksheet";
@@ -496,28 +523,29 @@ function TemplateSection({
       toast.error("Deskripsi diperlukan.");
       return;
     }
-
-    if (editing) {
-      const res =
-        kind === "label"
-          ? await updateLabelType(editing.ID, { deskripsiLabel: desc })
-          : await updateWorksheetType(editing.ID, { deskripsiWorksheet: desc });
-      if (res.ok) {
-        toast.success("Disimpan.");
-        setDialogOpen(false);
-        onSaved();
-      } else {
-        toast.error(res.error ?? "Gagal menyimpan.");
-      }
-      return;
-    }
-
-    if (!createFile) {
-      toast.error("Sila pilih fail .docx.");
-      return;
-    }
+    // Guard double-submit on both paths: the create action is not idempotent.
+    if (saving) return;
     setSaving(true);
     try {
+      if (editing) {
+        const res =
+          kind === "label"
+            ? await updateLabelType(editing.ID, { deskripsiLabel: desc })
+            : await updateWorksheetType(editing.ID, { deskripsiWorksheet: desc });
+        if (res.ok) {
+          toast.success("Disimpan.");
+          setDialogOpen(false);
+          onSaved();
+        } else {
+          toast.error(res.error ?? "Gagal menyimpan.");
+        }
+        return;
+      }
+
+      if (!createFile) {
+        toast.error("Sila pilih fail .docx.");
+        return;
+      }
       const fd = new FormData();
       fd.set("deskripsi", desc);
       fd.set("file", createFile);
@@ -532,7 +560,7 @@ function TemplateSection({
         toast.error(json.error ?? "Gagal mencipta jenis.");
       }
     } catch {
-      toast.error("Gagal mencipta jenis.");
+      toast.error(editing ? "Gagal menyimpan." : "Gagal mencipta jenis.");
     } finally {
       setSaving(false);
     }
@@ -542,13 +570,21 @@ function TemplateSection({
     const label =
       String((row as unknown as Record<string, unknown>)[descKey] ?? "") || row.namaFail;
     if (!confirm(`Padam '${label}'?`)) return;
-    const res =
-      kind === "label" ? await deleteLabelType(row.ID) : await deleteWorksheetType(row.ID);
-    if (res.ok) {
-      toast.success("Dipadam.");
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal memadam.");
+    if (busyId != null) return;
+    setBusyId(row.ID);
+    try {
+      const res =
+        kind === "label" ? await deleteLabelType(row.ID) : await deleteWorksheetType(row.ID);
+      if (res.ok) {
+        toast.success("Dipadam.");
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal memadam.");
+      }
+    } catch {
+      toast.error("Gagal memadam.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -798,9 +834,13 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
   const [year, setYear] = useState(currentYear());
   const [value, setValue] = useState("1");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    // Re-enter the loading state so the input is disabled and cannot be saved
+    // with the *previous* year's value while the new year loads.
+    setLoading(true);
     (async () => {
       const supabase = createClient();
       const { data } = await supabase
@@ -824,12 +864,20 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
       toast.error("Nilai mesti integer >= 1.");
       return;
     }
-    const res = await updateRunningNumber(year, parsed);
-    if (res.ok) {
-      toast.success(`Nombor berurutan ${year} disimpan.`);
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal menyimpan.");
+    if (saving || loading) return;
+    setSaving(true);
+    try {
+      const res = await updateRunningNumber(year, parsed);
+      if (res.ok) {
+        toast.success(`Nombor berurutan ${year} disimpan.`);
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal menyimpan.");
+      }
+    } catch {
+      toast.error("Gagal menyimpan.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -864,7 +912,9 @@ function RunningNumberCard({ onSaved }: { onSaved: () => void }) {
             />
           </div>
         </div>
-        <Button onClick={handleSave}>Simpan</Button>
+        <Button onClick={handleSave} disabled={loading || saving}>
+          {saving ? "Menyimpan..." : "Simpan"}
+        </Button>
       </CardContent>
     </Card>
   );
@@ -876,9 +926,13 @@ function UdsRunningNumberCard({ onSaved }: { onSaved: () => void }) {
   const [year, setYear] = useState(currentYear());
   const [value, setValue] = useState("1");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    // Re-enter the loading state so the input is disabled and cannot be saved
+    // with the *previous* year's value while the new year loads.
+    setLoading(true);
     (async () => {
       const supabase = createClient();
       const { data } = await supabase
@@ -902,12 +956,20 @@ function UdsRunningNumberCard({ onSaved }: { onSaved: () => void }) {
       toast.error("Nilai mesti integer >= 1.");
       return;
     }
-    const res = await updateUdsRunningNumber(year, parsed);
-    if (res.ok) {
-      toast.success(`Nombor berurutan UDS ${year} disimpan.`);
-      onSaved();
-    } else {
-      toast.error(res.error ?? "Gagal menyimpan.");
+    if (saving || loading) return;
+    setSaving(true);
+    try {
+      const res = await updateUdsRunningNumber(year, parsed);
+      if (res.ok) {
+        toast.success(`Nombor berurutan UDS ${year} disimpan.`);
+        onSaved();
+      } else {
+        toast.error(res.error ?? "Gagal menyimpan.");
+      }
+    } catch {
+      toast.error("Gagal menyimpan.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -942,7 +1004,9 @@ function UdsRunningNumberCard({ onSaved }: { onSaved: () => void }) {
             />
           </div>
         </div>
-        <Button onClick={handleSave}>Simpan</Button>
+        <Button onClick={handleSave} disabled={loading || saving}>
+          {saving ? "Menyimpan..." : "Simpan"}
+        </Button>
       </CardContent>
     </Card>
   );

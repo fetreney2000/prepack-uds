@@ -4,7 +4,7 @@
 // shadcn date-picker (Popover + Calendar) for the luput field.
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -29,11 +29,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { format, parse } from "date-fns";
-import { startOfYear, endOfYear, addYears } from "date-fns";
+import { format, startOfYear, endOfYear, addYears } from "date-fns";
 import { useUdsUbatList, type UdsUbat, type UdsRekodLabel } from "@/lib/queries";
 import { createUdsRekodLabel, updateUdsRekodLabel, previewUdsRujukan } from "@/app/actions/uds";
 import { todayInKl } from "@/lib/format";
+import { parseLuputToISO } from "@/lib/biz/luput";
 
 const today = todayInKl;
 
@@ -44,7 +44,7 @@ interface Props {
 }
 
 const EMPTY = {
-  Tarikh: today(),
+  Tarikh: "",
   NamaUbat: "",
   Kekuatan: "",
   Kelompok: "",
@@ -62,13 +62,21 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
 
-  const items = ubatList ?? [];
+  // Memoised so its identity is stable across renders. Without this the reset
+  // effect below re-fires on every render while the list is loading (`[]` is a
+  // fresh array each time) and loops forever on `setForm`.
+  const items = useMemo(() => ubatList ?? [], [ubatList]);
+
+  // True once the user has interacted with the medication combobox, so the
+  // auto-match effect can never overwrite an explicit choice.
+  const userPickedUbo = useRef(false);
 
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   // Reset on open — pre-fill when editing, else blank.
   useEffect(() => {
+    userPickedUbo.current = false;
     if (open) {
       if (editing) {
         setForm({
@@ -80,29 +88,39 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
           Kuantiti: String(editing.Kuantiti),
           Penyedia: editing.Penyedia,
         });
-        // Pre-fill the combobox with the matching medication (by ID, else name).
-        const matched =
-          (editing.NamaUbatID != null
-            ? items.find((m) => m.ID === editing.NamaUbatID)
-            : undefined) ??
-          (editing.NamaUbat
-            ? items.find((m) => m.Nama.toUpperCase() === editing.NamaUbat.toUpperCase())
-            : undefined);
-        setUbo(matched ?? null);
         setPreview(editing.Rujukan);
       } else {
-        setForm(EMPTY);
+        // Tarikh is computed here rather than in EMPTY so a tab left open
+        // past midnight still defaults to the real today.
+        setForm({ ...EMPTY, Tarikh: today() });
         setUbo(null);
         setPreview(null);
       }
     }
+  }, [open, editing]);
+
+  // Pre-fill the combobox with the matching medication (by ID, else name).
+  // Deliberately separate from the reset effect above: it only touches `ubo`,
+  // so a late-loading or refetching medication list can never wipe form state.
+  useEffect(() => {
+    if (!open || !editing || userPickedUbo.current || items.length === 0) return;
+    const matched =
+      (editing.NamaUbatID != null
+        ? items.find((m) => m.ID === editing.NamaUbatID)
+        : undefined) ??
+      (editing.NamaUbat
+        ? items.find((m) => m.Nama.toUpperCase() === editing.NamaUbat.toUpperCase())
+        : undefined) ??
+      null;
+    setUbo((cur) => cur ?? matched);
   }, [open, editing, items]);
 
   // Live Rujukan preview from the chosen Tarikh (no reserve).
+  // In edit mode the real Rujukan is read-only and must be preserved as-is.
   useEffect(() => {
     let cancelled = false;
-    if (!open || !form.Tarikh) {
-      setPreview(null);
+    if (!open || editing || !form.Tarikh) {
+      if (!editing) setPreview(null);
       return;
     }
     const t = setTimeout(async () => {
@@ -113,7 +131,7 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
       cancelled = true;
       clearTimeout(t);
     };
-  }, [form.Tarikh, open]);
+  }, [form.Tarikh, open, editing]);
 
   const handleLuputSelect = (date?: Date) => {
     if (!date) return;
@@ -121,11 +139,25 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
     setForm((f) => ({ ...f, Luput: format(date, "dd/MM/yy") }));
   };
 
+  // Round-trip through the canonical luput grammar so the calendar agrees with
+  // every accepted format (MM/YY, MM/YYYY, DD/MM/YY, DD/MM/YYYY), not just
+  // dd/MM/yy.
   const selectedLuput = useMemo(() => {
-    if (!/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(form.Luput)) return undefined;
-    const d = parse(form.Luput, "dd/MM/yy", new Date());
-    return isNaN(d.getTime()) ? undefined : d;
+    const iso = parseLuputToISO(form.Luput);
+    if (!iso) return undefined;
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d);
   }, [form.Luput]);
+
+  // Only link a medication when the visible name still matches it. Editing the
+  // name to something else must drop the link, otherwise the server's canonical
+  // name override silently reverts the typed text.
+  const namaUbatID = useMemo(() => {
+    const typed = form.NamaUbat.trim().toUpperCase();
+    if (ubo && typed === ubo.Nama.trim().toUpperCase()) return ubo.ID;
+    if (editing && typed === editing.NamaUbat.trim().toUpperCase()) return editing.NamaUbatID;
+    return null;
+  }, [form.NamaUbat, ubo, editing]);
 
   const handleSubmit = async () => {
     if (!form.NamaUbat.trim() || !form.Kelompok.trim() || !form.Luput.trim() || !form.Penyedia.trim()) {
@@ -146,7 +178,7 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
       Luput: form.Luput,
       Kuantiti: kuantiti,
       Penyedia: form.Penyedia,
-      NamaUbatID: ubo?.ID ?? editing?.NamaUbatID ?? null,
+      NamaUbatID: namaUbatID,
     };
     const res = editing
       ? await updateUdsRekodLabel(editing.ID, payload)
@@ -155,7 +187,6 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
     if (res.ok) {
       toast.success(editing ? "Rekod dikemas kini." : `Rekod ${res.data?.Rujukan} disimpan.`);
       queryClient.invalidateQueries({ queryKey: ["uds-rekod-label"] });
-      queryClient.invalidateQueries({ queryKey: ["uds-laporan"] });
       onOpenChange(false);
     } else {
       toast.error(res.error ?? "Gagal menyimpan rekod.");
@@ -196,12 +227,26 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
               itemToStringValue={(m) => m.Nama}
               value={ubo}
               onValueChange={(m) => {
+                userPickedUbo.current = true;
                 setUbo(m);
                 setForm((f) => ({
                   ...f,
                   NamaUbat: m?.Nama ?? "",
-                  Kekuatan: m?.Kekuatan ?? f.Kekuatan,
+                  // Kekuatan is derived from the selected medication — clear it
+                  // rather than keeping the previous drug's value.
+                  Kekuatan: m?.Kekuatan ?? "",
                 }));
+              }}
+              onInputValueChange={(text) => {
+                userPickedUbo.current = true;
+                setForm((f) => ({ ...f, NamaUbat: text }));
+                // Free-typed text is not a selection: drop the link when the
+                // input no longer matches the chosen medication.
+                setUbo((cur) =>
+                  cur && cur.Nama.trim().toUpperCase() === text.trim().toUpperCase()
+                    ? cur
+                    : null,
+                );
               }}
             >
               <ComboboxInput />
@@ -239,7 +284,7 @@ export function UdsRekodLabelForm({ open, onOpenChange, editing = null }: Props)
                 <PopoverTrigger
                   render={<Button variant="outline" className="w-full justify-start" />}
                 >
-                  <CalendarIcon className="size-4" />
+                  <CalendarIcon className="size-4 text-amber-500" />
                   {form.Luput}
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-auto p-0">

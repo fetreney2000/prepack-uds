@@ -88,8 +88,10 @@ const EMPTY = {
   nomborMAL: "",
   arahanTambahan: "",
   jangkaHayat: "",
-  jenisLabel: null as string | null,
-  jenisWorksheet: null as string | null,
+  // Template fields store the lookup ID (not the display name) so a form value
+  // can never be lost to a name/ID round-trip or a late-loading lookup list.
+  jenisLabel: null as number | null,
+  jenisWorksheet: null as number | null,
 };
 
 type FormField = keyof typeof EMPTY;
@@ -172,14 +174,8 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
           arahanTambahan: editing.arahanTambahan ?? "",
           jangkaHayat:
             editing.jangkaHayat != null ? String(editing.jangkaHayat) : "",
-          jenisLabel:
-            editing.jenisLabel != null
-              ? (lookups?.label.find((r) => r.ID === editing.jenisLabel)?.deskripsilabel ?? null)
-              : null,
-          jenisWorksheet:
-            editing.jenisWorksheet != null
-              ? (lookups?.worksheet.find((r) => r.ID === editing.jenisWorksheet)?.deskripsiworksheet ?? null)
-              : null,
+          jenisLabel: editing.jenisLabel ?? null,
+          jenisWorksheet: editing.jenisWorksheet ?? null,
         });
       } else {
         setForm(EMPTY);
@@ -220,10 +216,8 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
       arahanTambahan: form.arahanTambahan || null,
       jangkaHayat:
         form.jangkaHayat === "" ? null : parseInt(form.jangkaHayat, 10),
-      jenisLabel:
-        form.jenisLabel == null ? null : labelIdFromName(form.jenisLabel),
-      jenisWorksheet:
-        form.jenisWorksheet == null ? null : worksheetIdFromName(form.jenisWorksheet),
+      jenisLabel: form.jenisLabel,
+      jenisWorksheet: form.jenisWorksheet,
     };
 
     setSaving(true);
@@ -243,21 +237,27 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
 
   // ---------- Render helpers ----------
 
-  const labelIdFromName = (name: string) =>
-    lookups?.label.find((r) => r.deskripsilabel === name)?.ID ?? null;
-  const worksheetIdFromName = (name: string) =>
-    lookups?.worksheet.find((r) => r.deskripsiworksheet === name)?.ID ?? null;
+  const labelName = (id: number | null) =>
+    id == null ? null : (lookups?.label.find((r) => r.ID === id)?.deskripsilabel ?? `ID ${id}`);
+  const worksheetName = (id: number | null) =>
+    id == null
+      ? null
+      : (lookups?.worksheet.find((r) => r.ID === id)?.deskripsiworksheet ?? `ID ${id}`);
 
   const formatReviewValue = (key: FormField): string => {
     const v = form[key];
     if (v === "" || v == null) return "—";
     switch (key) {
       case "harga":
-        return `RM ${parseFloat(v).toFixed(2)}`;
+        return `RM ${parseFloat(String(v)).toFixed(2)}`;
       case "jangkaHayat":
         return v === "0" ? "0 hari (ikut tarikh luput asal)" : `${v} hari`;
+      case "jenisLabel":
+        return labelName(v as number) ?? "—";
+      case "jenisWorksheet":
+        return worksheetName(v as number) ?? "—";
       default:
-        return v;
+        return String(v);
     }
   };
 
@@ -460,7 +460,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
                   <SelectContent>
                     <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.label ?? []).map((r) => (
-                      <SelectItem key={r.ID} value={r.deskripsilabel}>
+                      <SelectItem key={r.ID} value={r.ID}>
                         {r.deskripsilabel}
                       </SelectItem>
                     ))}
@@ -481,7 +481,7 @@ export function UbatForm({ open, onOpenChange, editing = null }: Props) {
                   <SelectContent>
                     <SelectItem value={null}>— Tiada —</SelectItem>
                     {(lookups?.worksheet ?? []).map((r) => (
-                      <SelectItem key={r.ID} value={r.deskripsiworksheet}>
+                      <SelectItem key={r.ID} value={r.ID}>
                         {r.deskripsiworksheet}
                       </SelectItem>
                     ))}

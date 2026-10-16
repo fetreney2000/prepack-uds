@@ -36,15 +36,19 @@ export default function UdsSenaraiUbatPage() {
   const handleDelete = async () => {
     if (!deleting) return;
     setDeleteBusy(true);
-    const res = await deleteUdsUbat(deleting.ID);
-    setDeleteBusy(false);
-
-    if (res.ok) {
-      toast.success("Ubat dipadam.");
-      queryClient.invalidateQueries({ queryKey: ["uds-ubat"] });
-      setDeleting(null);
-    } else {
-      toast.error(res.error ?? "Gagal memadam ubat.");
+    try {
+      const res = await deleteUdsUbat(deleting.ID);
+      if (res.ok) {
+        toast.success("Ubat dipadam.");
+        queryClient.invalidateQueries({ queryKey: ["uds-ubat"] });
+        setDeleting(null);
+      } else {
+        toast.error(res.error ?? "Gagal memadam ubat.");
+      }
+    } catch {
+      toast.error("Gagal memadam ubat.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -121,7 +125,13 @@ export default function UdsSenaraiUbatPage() {
         editing={editing}
       />
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(v) => {
+          // Keep the dialog open while a delete is in flight.
+          if (!v && !deleteBusy) setDeleting(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Padam Ubat?</AlertDialogTitle>

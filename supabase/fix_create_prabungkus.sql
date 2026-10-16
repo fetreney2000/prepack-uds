@@ -1,4 +1,9 @@
-﻿-- Fix: create_prabungkus — replace quoted "idPrabungkus" with unquoted idprabungkus
+﻿-- !!! SUPERSEDED !!!
+-- Do NOT run this script. It restores bugs fixed in fix_running_numbers.sql
+-- (lpad() truncation -> infinite loop, setval off-by-one, missing counter lock).
+-- Kept only for history. Use supabase/fix_running_numbers.sql instead.
+-- ============================================================
+-- Fix: create_prabungkus — replace quoted "idPrabungkus" with unquoted idprabungkus
 -- The column was created without quotes, so PostgreSQL stores it as lowercase.
 -- Run this in the Supabase SQL Editor to fix the deployed function.
 -- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -90,3 +95,4 @@ begin
   return v_row;
 end;
 $$;
+

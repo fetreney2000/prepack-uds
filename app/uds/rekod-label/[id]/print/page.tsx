@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AlertCircle, Loader2, Printer, ArrowLeft } from "lucide-react";
+import { AlertCircle, Printer, ArrowLeft } from "lucide-react";
 import {
   MANUAL_MIN_COLS,
   MANUAL_MAX_COLS,
@@ -82,10 +82,11 @@ export default function UdsLabelPrintPage() {
   // Check URL — appends check=1 to get fit metadata as JSON (no PDF).
   const checkUrl = useMemo(() => `${pdfUrl}&check=1`, [pdfUrl]);
 
-  // Live fit validation: for manual mode, ask the server whether the
-  // chosen font/size/grid can fit all text without truncation.
+  // Live fit validation — runs for BOTH modes (the solver can also fail to fit
+  // a very long label). On a failed check we cannot verify the layout, so we
+  // report "unfit" rather than letting the user print an error response.
   useEffect(() => {
-    if (!id || mode !== "manual") {
+    if (!id) {
       setFitStatus("fit");
       return;
     }
@@ -98,14 +99,14 @@ export default function UdsLabelPrintPage() {
         const body = (await res.json()) as { fits?: boolean };
         setFitStatus(body?.fits ? "fit" : "unfit");
       } catch {
-        if (!cancelled) setFitStatus("fit");
+        if (!cancelled) setFitStatus("unfit");
       }
     }, 200);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [checkUrl, id, mode]);
+  }, [checkUrl, id]);
 
   // Capture the auto solver's chosen values so switching to manual mode
   // can pre-fill the controls with the auto result.
@@ -124,7 +125,10 @@ export default function UdsLabelPrintPage() {
           cols?: number;
           rows?: number;
         };
-        if (body?.font && body?.fontSize && body?.cols && body?.rows) {
+        // Only trust a real solution: when `fits` is false the server still
+        // returns fallback metadata (4x4, default size) that the solver never
+        // chose.
+        if (body?.fits && body.font && body.fontSize && body.cols && body.rows) {
           setAutoValues({
             font: body.font,
             fontSize: body.fontSize.toFixed(1),
@@ -149,13 +153,17 @@ export default function UdsLabelPrintPage() {
     if (next === "manual" && autoValues) {
       setFont(autoValues.font);
       setFontSize(autoValues.fontSize);
-      setRows(autoValues.rows);
-      setCols(autoValues.cols);
+      // The auto solver ranges over 5–9 while the manual selects only offer
+      // 4–8. Clamp so the controls always show a selectable option instead of
+      // rendering blank.
+      setRows(String(Math.min(Math.max(Number(autoValues.rows), MANUAL_MIN_ROWS), MANUAL_MAX_ROWS)));
+      setCols(String(Math.min(Math.max(Number(autoValues.cols), MANUAL_MIN_COLS), MANUAL_MAX_COLS)));
     }
     setMode(next);
   };
 
-  const blockPrint = !id || (mode === "manual" && fitStatus === "unfit");
+  // Also block while the fit check is still in flight.
+  const blockPrint = !id || fitStatus !== "fit";
 
   const handlePrint = () => {
     const win = iframeRef.current?.contentWindow;
@@ -289,16 +297,16 @@ export default function UdsLabelPrintPage() {
               <div className="flex h-72 items-center justify-center text-sm text-muted-foreground">
                 ID tidak sah.
               </div>
-            ) : mode === "manual" && fitStatus === "unfit" ? (
+            ) : fitStatus === "unfit" ? (
               <div className="flex h-72 flex-col items-center justify-center gap-3 p-6 text-center">
                 <AlertCircle className="h-8 w-8 text-destructive" />
                 <p className="text-sm font-medium text-destructive">
                   Gabungan tidak sesuai.
                 </p>
                 <p className="max-w-md text-sm text-muted-foreground">
-                  Saiz fon dan grid yang dipilih tidak cukup untuk memuatkan
-                  semua teks tanpa pemotongan. Kurangkan saiz fon, tambah saiz
-                  grid, atau tukar font.
+                  {mode === "manual"
+                    ? "Saiz fon dan grid yang dipilih tidak cukup untuk memuatkan semua teks tanpa pemotongan. Kurangkan saiz fon, tambah saiz grid, atau tukar font."
+                    : "Teks label terlalu panjang untuk dimuatkan pada sebarang grid. Pendekkan nama ubat, atau cuba tetapan manual dengan saiz fon lebih kecil."}
                 </p>
               </div>
             ) : (

@@ -61,12 +61,16 @@ export function computeDashboard(records: RecordRow[], year: number, month: numb
 
   const currentMonth = { ...monthStats[month - 1] };
   const ytd = { totalPek: 0, totalWorksheet: 0, totalJenisUbat: 0 };
+  // "Jenis Ubat" is a distinct count, so it must not be summed across months —
+  // a drug prepacked in 12 months is still one drug. Track the union instead.
+  const ytdMeds = new Set<string>();
   for (let i = 0; i < month; i++) {
     const s = monthStats[i];
     ytd.totalPek += s.totalPek;
     ytd.totalWorksheet += s.totalWorksheet;
-    ytd.totalJenisUbat += s.totalJenisUbat;
+    for (const name of medsByMonth.get(i + 1) ?? []) ytdMeds.add(name);
   }
+  ytd.totalJenisUbat = ytdMeds.size;
 
   return {
     currentMonth,

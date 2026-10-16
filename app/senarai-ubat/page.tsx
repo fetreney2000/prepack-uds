@@ -67,15 +67,19 @@ export default function SenaraiUbatPage() {
   const handleDelete = async () => {
     if (!deleting) return;
     setDeleteBusy(true);
-    const res = await deleteUbat(deleting.ID);
-    setDeleteBusy(false);
-
-    if (res.ok) {
-      toast.success("Ubat dipadam.");
-      queryClient.invalidateQueries({ queryKey: ["ubat"] });
-      setDeleting(null);
-    } else {
-      toast.error(res.error ?? "Gagal memadam ubat.");
+    try {
+      const res = await deleteUbat(deleting.ID);
+      if (res.ok) {
+        toast.success("Ubat dipadam.");
+        queryClient.invalidateQueries({ queryKey: ["ubat"] });
+        setDeleting(null);
+      } else {
+        toast.error(res.error ?? "Gagal memadam ubat.");
+      }
+    } catch {
+      toast.error("Gagal memadam ubat.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -182,6 +186,7 @@ export default function SenaraiUbatPage() {
           initialColumnVisibility={ubatColumnVisibility}
           renderDetailPanel={renderUbatDetail}
           storageKey="dt:senarai-ubat"
+          rowKey={(r) => String(r.ID)}
         />
       )}
 
@@ -196,7 +201,10 @@ export default function SenaraiUbatPage() {
       {/* Delete confirmation */}
       <AlertDialog
         open={!!deleting}
-        onOpenChange={(v) => !v && setDeleting(null)}
+        onOpenChange={(v) => {
+          // Keep the dialog open while a delete is in flight.
+          if (!v && !deleteBusy) setDeleting(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

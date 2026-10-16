@@ -1,3 +1,8 @@
+﻿-- !!! SUPERSEDED !!!
+-- Do NOT run this script. It restores bugs fixed in fix_running_numbers.sql
+-- (lpad() truncation -> infinite loop, setval off-by-one, missing counter lock).
+-- Kept only for history. Use supabase/fix_running_numbers.sql instead.
+-- ============================================================
 -- Fix: prevent tblsenaraiprabungkus ID collision
 -- The PostgreSQL identity sequence can desync from actual data (e.g. after
 -- data import or backup restore). This patch adds a self-healing step to
@@ -97,3 +102,4 @@ begin
   return v_row;
 end;
 $$;
+
